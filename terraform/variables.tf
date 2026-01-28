@@ -1,0 +1,32 @@
+variable "aws_region" {
+  description = "AWS region for resources."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "bucket_name" {
+  description = "S3 bucket for PubMed data (raw + processed prefixes)."
+  type        = string
+  default     = "pubmed-rag-data"
+}
+
+variable "raw_prefix" {
+  description = "Prefix for raw PubMed data within the bucket."
+  type        = string
+  default     = "raw/"
+}
+
+variable "processed_prefix" {
+  description = "Prefix for processed PubMed data within the bucket."
+  type        = string
+  default     = "processed/"
+}
+
+variable "tags" {
+  description = "Tags to apply to the S3 bucket."
+  type        = map(string)
+  default     = {
+    project = "pubmed-rag-system"
+    env     = "production"
+  }
+}

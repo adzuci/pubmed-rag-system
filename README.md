@@ -1,6 +1,6 @@
 # PubMed RAG System
 
-This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver- and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.
+This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.
 
 ## Overview
 - Ingest PubMed articles with NCBI E-utilities and store raw/processed data in S3.
@@ -9,11 +9,11 @@ This project builds a retrieval-augmented generation (RAG) system over PubMed to
 - Provide a minimal Streamlit UI for querying with sources.
 
 ## Repository Layout
-- `ingest/`: PubMed fetch scripts and helpers.
+- `ingest/`: PubMed fetch scripts.
 - `processing/`: Chunking, embeddings, and indexing.
 - `rag/`: Retrieval and prompt assembly logic.
-- `api/`: Inference handler (Lambda entrypoint).
-- `ui/`: Streamlit app.
+- `api/`: TBA.
+- `ui/`: TBA Streamlit app.
 - `docs/adr/`: Architecture Decision Records.
 - `notebooks/`: Local exploration notebooks.
 
@@ -31,14 +31,9 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_stub.ipynb` and run the cells.
 
-
-Notes:
-- Respect NCBI rate limits.
-- Keep the fetched corpus small to stay within the assignment scope.
-
 ## Project checklist
 - [x] Local PubMed ingest (Jupyter notebook)
-- [ ] Repo scaffolding and config
+- [x] Repo scaffolding and config
 - [ ] Terraform: S3 buckets (raw + processed)
 - [ ] Upload raw PubMed data to S3
 - [ ] Enable AWS Bedrock and IAM permissions
@@ -57,8 +52,6 @@ Minimal AWS services (details to be documented in this repo):
 - **Bedrock** for embeddings + LLM
 - **Lambda + API Gateway** for scalable inference endpoint
 - **Streamlit** for UI (local or hosted)
-
-Reference: https://docs.aws.amazon.com/prescriptive-guidance/latest/choosing-an-aws-vector-database-for-rag-use-cases/vector-db-options.html
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
