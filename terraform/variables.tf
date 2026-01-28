@@ -42,3 +42,52 @@ variable "ncbi_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "bedrock_model_arn" {
+  description = "Bedrock model ARN used for retrieve-and-generate."
+  type        = string
+  default     = "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0"
+}
+
+variable "rag_api_name" {
+  description = "Name prefix for the RAG API."
+  type        = string
+  default     = "pubmed-rag-api"
+}
+
+variable "streamlit_app_name" {
+  description = "Name prefix for the Streamlit app."
+  type        = string
+  default     = "pubmed-rag-ui"
+}
+
+variable "streamlit_app_version" {
+  description = "Version tag for the Streamlit app container."
+  type        = string
+  default     = "v0.0.1"
+}
+
+variable "opensearch_admin_principals" {
+  description = "Additional OpenSearch Serverless principals allowed to manage the KB collection/index."
+  type        = list(string)
+  default     = []
+}
+
+variable "streamlit_domain_name" {
+  description = "Custom domain name for the Streamlit app."
+  type        = string
+  default     = "mamoruproject.org"
+}
+
+variable "streamlit_cf_header_name" {
+  description = "CloudFront custom header name for ALB origin."
+  type        = string
+  default     = "X-Verify-Origin"
+}
+
+variable "streamlit_cf_header_value" {
+  description = "CloudFront custom header value for ALB origin."
+  type        = string
+  default     = "streamlit-CloudFront-Distribution"
+}
+

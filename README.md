@@ -1,6 +1,18 @@
+![Mamoru Project Logo](assets/mamoru-project-logo.png)
+
 # PubMed RAG System
 
 This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.
+
+## The Story of Mamoru Project
+Mamoru (守る) is a Japanese verb that means to protect, to safeguard, to watch over.
+It’s often used not for objects, but for people, traditions, and responsibilities entrusted to someone’s care.
+
+Mamoru Project is built on that idea.
+
+As people age or experience cognitive decline, knowledge doesn’t disappear — it becomes something others must hold, protect, and carry forward. Caregivers, clinicians, and families step into that role every day, often without clear, trustworthy tools to help them make sense of complex medical information.
+
+Mamoru Project exists to safeguard knowledge on behalf of those who can’t always access it themselves.
 
 ## Overview
 - Ingest PubMed articles with NCBI E-utilities and store raw/processed data in S3.
@@ -45,6 +57,7 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
    - `S3_BUCKET=your-bucket` (for uploads)
    - `BEDROCK_KB_ID=kb-XXXXXXXXXX` (for RAG prototype)
    - `BEDROCK_MODEL_ARN=...` (optional, defaults in notebook)
+   - `RAG_API_URL=...` (optional, Streamlit UI)
 3. Launch Jupyter Notebook (no Lab required):
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
@@ -96,6 +109,17 @@ After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:
 ## RAG Prototype (Notebook)
 Use `notebooks/pubmed_rag_prototype.ipynb` for local retrieval and answer generation.
 Set `BEDROCK_KB_ID` (required) and optionally `BEDROCK_MODEL_ARN` in `.env`.
+
+## RAG API + Streamlit UI
+Terraform provisions a Lambda-backed HTTP API for RAG queries and an optional
+serverless Streamlit app. The UI can use the API endpoint from Terraform outputs:
+- `rag_api_endpoint` (HTTP API base URL)
+- `streamlit_cloudfront_url` (Streamlit UI URL)
+
+## Domain + DNS
+Terraform can register `mamoru.org`, create a hosted zone, request an ACM cert
+(us-east-1), and map the apex domain to a custom CloudFront distribution that
+fronts the Streamlit app. Provide `domain_contact` details in Terraform inputs.
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).

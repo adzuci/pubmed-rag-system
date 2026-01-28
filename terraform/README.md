@@ -4,6 +4,7 @@ This folder will contain all Terraform for the AWS infrastructure for this proje
 Currently it manages the S3 bucket for PubMed data plus Bedrock Knowledge Base resources:
 - `raw/`
 - `processed/`
+It also provisions a Lambda-backed HTTP API for RAG queries and a serverless Streamlit UI.
 
 ## Quick start
 1. `terraform init`
@@ -37,6 +38,14 @@ terraform {
 - `tags` (default: `project=pubmed-rag-system`, `env=production`)
 - `ncbi_email` (required)
 - `ncbi_api_key` (optional)
+- `bedrock_model_arn` (default: Claude 3.5 Sonnet)
+- `rag_api_name` (default: `pubmed-rag-api`)
+- `streamlit_app_name` (default: `pubmed-rag-ui`)
+- `streamlit_app_version` (default: `v0.0.1`)
+- `opensearch_admin_principals` (list of IAM principals for OpenSearch access)
+- `streamlit_domain_name` (default: `mamoru.org`)
+- `streamlit_cf_header_name` (default: `X-Verify-Origin`)
+- `streamlit_cf_header_value` (default: `streamlit-CloudFront-Distribution`)
 
 ## Bedrock Knowledge Base
 This module also provisions an Amazon Bedrock Knowledge Base using the
@@ -51,3 +60,8 @@ Key outputs to note (see `terraform/outputs.tf`):
 - `bedrock_s3_data_source_name`
 - `bedrock_kb_role_name`
 - `opensearch_collection_endpoint`
+- `rag_api_endpoint`
+- `streamlit_cloudfront_url`
+- `streamlit_custom_domain`
+- `streamlit_custom_cloudfront_url`
+- `route53_zone_name_servers`
