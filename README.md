@@ -1,6 +1,6 @@
 ![Mamoru Project Logo](assets/mamoru-project-logo.png)
 
-# PubMed RAG System
+# Mamoru Project: A PubMed RAG Based System
 
 This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.
 
@@ -10,7 +10,7 @@ It’s often used not for objects, but for people, traditions, and responsibilit
 
 Mamoru Project is built on that idea.
 
-As people age or experience cognitive decline, knowledge doesn’t disappear — it becomes something others must hold, protect, and carry forward. Caregivers, clinicians, and families step into that role every day, often without clear, trustworthy tools to help them make sense of complex medical information.
+As people age or experience cognitive decline, knowledge doesn’t disappear, it becomes something others must hold, protect, and carry forward. Caregivers, clinicians, and families step into that role every day, often without clear, trustworthy tools to help them make sense of complex medical information.
 
 Mamoru Project exists to safeguard knowledge on behalf of those who can’t always access it themselves.
 
@@ -25,9 +25,15 @@ Mamoru Project exists to safeguard knowledge on behalf of those who can’t alwa
 flowchart LR
   A[PubMed] -->|ESearch/EFetch| B[Local ingest notebook]
   B -->|raw text| S3Raw[(S3 raw/)]
-  B -->|processed JSON| S3Processed[(S3 processed/)]
+  S3Raw --> P[Processing notebook]
+  P -->|processed JSON| S3Processed[(S3 processed/)]
   S3Processed --> KB[Bedrock Knowledge Base]
-  Q[User question] --> UI[Streamlit UI]
+
+  U[User] --> D[Custom domain]
+  D --> CF[CloudFront]
+  CF --> ALB[ALB]
+  ALB --> UI[Streamlit UI]
+
   UI --> API[API Gateway + Lambda]
   API --> KB
   API --> LLM[Bedrock LLM]
@@ -36,8 +42,6 @@ flowchart LR
 ```
 
 ## Repository Layout
-- `ingest/`: PubMed fetch scripts.
-- `processing/`: Chunking, embeddings, and indexing.
 - `rag/`: Retrieval and prompt assembly logic.
 - `api/`: TBA.
 - `ui/`: TBA Streamlit app.
