@@ -1,10 +1,12 @@
 # Terraform
 
-This folder will contain all Terraform for the AWS infrastructure for this project.
-Currently it manages the S3 bucket for PubMed data plus Bedrock Knowledge Base resources:
-- `raw/`
-- `processed/`
-It also provisions a Lambda-backed HTTP API for RAG queries and a serverless Streamlit UI.
+This folder contains Terraform for the AWS infrastructure for this project.
+It manages:
+- S3 bucket for PubMed data (`raw/` and `processed/` prefixes)
+- Bedrock Knowledge Base and S3 data source
+- Lambda-backed HTTP API for RAG queries
+- PubMed ingest Lambda that writes raw MEDLINE text into S3
+- Serverless Streamlit UI and optional custom domain (Route53 + CloudFront)
 
 ## Quick start
 1. `terraform init`
@@ -41,13 +43,16 @@ terraform {
 - `bedrock_model_arn` (default: Claude 3.5 Sonnet)
 - `rag_api_name` (default: `pubmed-rag-api`)
 - `streamlit_app_name` (default: `pubmed-rag-ui`)
-- `streamlit_app_version` (default: `v0.0.1`)
+- `streamlit_app_version` (default: `v0.0.2`)
 - `opensearch_admin_principals` (list of IAM principals for OpenSearch access)
 - `streamlit_domain_name` (default: `mamoru.org`)
 - `streamlit_hosted_zone_id` (optional, use an existing Route53 zone)
 - `streamlit_cf_header_name` (default: `X-Verify-Origin`)
 - `streamlit_cf_header_value` (default: `streamlit-CloudFront-Distribution`)
 - `alert_email` (default: `adam@blackwell.ai`)
+- `pubmed_query` (default: dementia caregiving query string)
+- `pubmed_retmax` (default: `500`)
+- `pubmed_batch_size` (default: `100`)
 
 ## Bedrock Knowledge Base
 This module also provisions an Amazon Bedrock Knowledge Base using the
@@ -67,6 +72,19 @@ Key outputs to note (see `terraform/outputs.tf`):
 - `streamlit_custom_domain`
 - `streamlit_custom_cloudfront_url`
 - `route53_zone_name_servers`
+- `pubmed_ingest_lambda_name`
+
+## PubMed ingest Lambda
+Terraform defines a dedicated Lambda (`pubmed_ingest`) that:
+- Reads NCBI credentials from Secrets Manager (`ncbi_credentials` secret)
+- Executes a PubMed query via Biopython Entrez
+- Writes MEDLINE-derived text files to `s3://<bucket_name>/<raw_prefix>/`
+
+It is not scheduled by default. Trigger it manually, e.g.:
+- `aws lambda invoke --function-name $(terraform output -raw pubmed_ingest_lambda_name) --payload '{}' /tmp/ingest.json`
+
+To add a schedule, create an EventBridge rule and target in a follow-up change
+so you can control cadence and cost explicitly.
 
 ## Rate limiting
 The HTTP API stage applies default throttling (burst 10, rate 2 RPS). If you need

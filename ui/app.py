@@ -8,9 +8,7 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mamoru-ui")
 
-LOGO_URL = (
-    "https://raw.githubusercontent.com/adzuci/pubmed-rag-system/main/assets/mamoru-project-logo.png"
-)
+LOGO_URL = "https://raw.githubusercontent.com/adzuci/pubmed-rag-system/main/assets/mamoru-project-logo.png"
 
 st.set_page_config(page_title="Mamoru Project", page_icon="🧠", layout="wide")
 
@@ -60,13 +58,10 @@ def normalize_api_url(value: str) -> str:
         cleaned = f"https://{cleaned}"
     return cleaned
 
+
 with st.sidebar:
     st.header("Configuration")
-    default_api = (
-        os.getenv("RAG_API_URL")
-        or os.getenv("RAG_API_ENDPOINT")
-        or ""
-    )
+    default_api = os.getenv("RAG_API_URL") or os.getenv("RAG_API_ENDPOINT") or ""
     default_api = normalize_api_url(default_api)
     api_url = st.text_input(
         "API base URL",
@@ -99,6 +94,7 @@ with col_right:
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 def render_chat(history):
     if not history:
         return
@@ -116,6 +112,7 @@ def render_chat(history):
                     with st.expander(f"Source {idx}", expanded=False):
                         st.write(source.get("text", ""))
                         st.json(source.get("metadata", {}))
+
 
 if ask:
     api_url = normalize_api_url(api_url)

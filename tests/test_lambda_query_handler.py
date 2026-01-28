@@ -31,7 +31,9 @@ def test_handler_returns_answer_and_sources(monkeypatch):
 
     client = DummyClient(response)
     monkeypatch.setattr(query_handler, "client", client)
-    monkeypatch.setenv("BEDROCK_KB_ID", "kb-123")
+    # The handler reads KB_ID at import time, so patch the module
+    # variable directly instead of relying only on environment.
+    monkeypatch.setattr(query_handler, "KB_ID", "kb-123")
 
     event = {
         "body": json.dumps({"question": "What is dementia?"}),
@@ -43,4 +45,3 @@ def test_handler_returns_answer_and_sources(monkeypatch):
     body = json.loads(result["body"])
     assert body["answer"] == "Test answer."
     assert body["sources"][0]["metadata"]["pmid"] == "123"
-

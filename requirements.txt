@@ -6,3 +6,4 @@ pre-commit==4.5.1
 nbstripout==0.9.0
 # TODO: Move testing dependencies to a separate requirements-dev.txt or similar.
 pytest==9.0.2
+black==24.10.0

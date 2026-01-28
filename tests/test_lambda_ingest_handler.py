@@ -101,14 +101,19 @@ def test_handler_writes_records_to_s3(monkeypatch):
     monkeypatch.setenv("S3_BUCKET", "bucket")
     monkeypatch.setenv("RAW_PREFIX", "raw/")
 
-    monkeypatch.setattr(ingest_handler.boto3, "client", lambda service: secrets_client if service == "secretsmanager" else s3_client)
+    monkeypatch.setattr(
+        ingest_handler.boto3,
+        "client",
+        lambda service: secrets_client if service == "secretsmanager" else s3_client,
+    )
     monkeypatch.setattr(ingest_handler, "Entrez", entrez)
     monkeypatch.setattr(ingest_handler, "Medline", DummyMedline)
 
-    result = ingest_handler.handler({}, SimpleNamespace(get_remaining_time_in_millis=lambda: 10_000_000))
+    result = ingest_handler.handler(
+        {}, SimpleNamespace(get_remaining_time_in_millis=lambda: 10_000_000)
+    )
 
     assert result["statusCode"] == 200
     body = json.loads(result["body"])
     assert body["written"] == 2
     assert len(s3_client.put_calls) == 2
-

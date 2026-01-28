@@ -28,4 +28,5 @@ process:
 		$(NOTEBOOK_DIR)/pubmed_processing_analysis.ipynb
 
 test:
-	$(PYTHON) -m pytest -q
+	# Export variables from .env (if present) into the test environment.
+	set -a; [ -f .env ] && . .env; set +a; PYTHONPATH=. $(PYTHON) -m pytest -q

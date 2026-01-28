@@ -59,12 +59,27 @@ flowchart LR
 - `terraform/`: AWS infrastructure (S3, Bedrock KB, API, Streamlit).
 - `assets/`: Project images (logo, screenshots).
 
-## Development approach
-Given the time constraints, I focused most on the search/fetch notebook and the
+## Development Approach
+Given the time constraints, my initial implementation sprint focused most on the search/fetch notebook and the
 query + ingest handlers, which were heavily influenced by the [boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-agent-runtime.html) and [Biopython](https://biopython.org/docs/latest/Tutorial/chapter_entrez.html) docs.
-The Terraform and Streamlit logic were partially generated using a Plan and
+The Terraform and Streamlit logic were stubbed out and adapted using a Plan and
 Execute workflow similar to Eric Ma's approach, using Cursor and GPT-5.2 Codex
 in a chaperoned fashion ([source](https://www.youtube.com/watch?v=YuA_9x1aSZ4)).
+I intentionally skipped adding full static typing to the Python code here, but in a longer-lived production service I would normally add type hints and a type checker (for example, mypy or Pyright) to keep the codebase safer to change.
+
+## Contributing
+To work on this repo:
+- Create and activate a virtual environment:
+  - `python -m venv .venv`
+  - `source .venv/bin/activate`
+- Install dependencies:
+  - `pip install -r requirements.txt`
+- Set up pre-commit hooks:
+  - `make precommit-install`
+- Run tests and basic checks:
+  - `make test`
+
+If you want to propose changes, open a pull request so it can be reviewed rather than pushing directly to main.
 
 ## Local Data Ingestion
 You can run ingestion locally in a Jupyter notebook for quick iteration:
@@ -76,24 +91,15 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 2. Create a local `.env` (gitignored) with:
    - `NCBI_EMAIL=you@example.com`
    - `NCBI_API_KEY=your_key_here` (optional)
-   - `S3_BUCKET=your-bucket` (for uploads)
-   - `BEDROCK_KB_ID=kb-XXXXXXXXXX` (for RAG prototype)
-   - `BEDROCK_MODEL_ARN=...` (optional, defaults in notebook)
+   - `S3_BUCKET=your-bucket`
+   - `BEDROCK_KB_ID=kb-XXXXXXXXXX`
+   - `BEDROCK_MODEL_ARN=...` (optional)
    - `RAG_API_URL=...` (optional, Streamlit UI)
-3. Launch Jupyter Notebook (no Lab required):
+3. Launch Jupyter Notebook:
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
 
-## Tests
-Basic tests live under `tests/` and focus on the Lambda handlers and pure helpers.
-
-- Install deps (recommended in a virtualenv):
-  - `python -m venv .venv && source .venv/bin/activate`
-  - `pip install -r requirements.txt`
-- Run tests:
-  - `pytest`
-
-As the project evolves, add more tests around new handlers, data parsers, and any non-trivial logic before wiring them into Terraform or production workflows.
+As the project evolves, more tests can be around new handlers, data parsers, and any non-trivial logic before wiring them into production workflows.
 
 ## Terraform
 Current Terraform covers:
@@ -202,9 +208,11 @@ Main cost drivers (order of magnitude, depends on usage and region):
 Once the product is considered viable, possible next steps include:
 1. Resolve UI bugs and extra modals in Streamlit app.
 1. Adding auth, encoding the API endpoint and setting per-user rate limits.
-1. Migrating away from Streamlit to a static React frontend behind a WAF.
-1. Moving the query Lambda logic to EKS or another compute platform that can scale based on load.
-1. Optimizing spend by adding a caching layer and using cheaper models for simpler questions.
+1. Migrating away from Streamlit to a static React frontend behind a WAF, and reviewing CIS benchmarks / hardening the production environment.
+1. Creating a dedicated stage environment and wiring up CI/CD to promote changes from stage to prod.
+1. Locking down credentials further (e.g., narrower IAM policies, secret rotation).
+1. Expanding test coverage for Lambdas, data parsing, and infra integration flows.
+1. Adding a GitHub Actions CI job to run `make test`, linting, and `terraform validate` on every pull request.
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
