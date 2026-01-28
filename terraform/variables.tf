@@ -30,3 +30,16 @@ variable "tags" {
     env     = "production"
   }
 }
+
+variable "ncbi_email" {
+  description = "NCBI email for Entrez API usage."
+  type        = string
+  sensitive   = true
+}
+
+variable "ncbi_api_key" {
+  description = "NCBI API key (optional)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

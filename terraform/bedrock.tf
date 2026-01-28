@@ -4,11 +4,6 @@ module "bedrock" {
 
   create_agent = false
 
-  enable_bedrock           = true
-  create_service_role      = true
-  service_role_name        = "pubmed-rag-bedrock"
-  service_role_description = "Bedrock role for PubMed RAG"
-
   create_default_kb = true
   kb_name           = "pubmed-rag-knowledge-base"
   kb_description    = "Knowledge base for PubMed RAG system with processed articles"

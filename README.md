@@ -8,6 +8,21 @@ This project builds a retrieval-augmented generation (RAG) system over PubMed to
 - Serve a single-turn Q&A endpoint via AWS Lambda + API Gateway.
 - Provide a minimal Streamlit UI for querying with sources.
 
+## Architecture Diagram
+```mermaid
+flowchart LR
+  A[PubMed] -->|ESearch/EFetch| B[Local ingest notebook]
+  B -->|raw text| S3Raw[(S3 raw/)]
+  B -->|processed JSON| S3Processed[(S3 processed/)]
+  S3Processed --> KB[Bedrock Knowledge Base]
+  Q[User question] --> UI[Streamlit UI]
+  UI --> API[API Gateway + Lambda]
+  API --> KB
+  API --> LLM[Bedrock LLM]
+  KB --> API
+  API --> UI
+```
+
 ## Repository Layout
 - `ingest/`: PubMed fetch scripts.
 - `processing/`: Chunking, embeddings, and indexing.
@@ -52,6 +67,11 @@ Minimal AWS services (details to be documented in this repo):
 - **Bedrock** for embeddings + LLM
 - **Lambda + API Gateway** for scalable inference endpoint
 - **Streamlit** for UI (local or hosted)
+
+## Secrets + Scheduling
+- Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager (no plaintext in repo).
+- Scheduling: use EventBridge to trigger a Lambda (or ECS task) for periodic ingest.
+- Details: `docs/ops/scheduled_ingest.md`
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
