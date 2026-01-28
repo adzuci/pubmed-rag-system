@@ -22,3 +22,33 @@ output "opensearch_collection_endpoint" {
   description = "OpenSearch Serverless collection endpoint (vector store)."
   value       = module.bedrock.default_collection.collection_endpoint
 }
+
+output "rag_api_endpoint" {
+  description = "HTTP API endpoint for the RAG Lambda."
+  value       = aws_apigatewayv2_api.rag_api.api_endpoint
+}
+
+output "streamlit_cloudfront_url" {
+  description = "Streamlit CloudFront distribution URL."
+  value       = module.streamlit_app.streamlit_cloudfront_distribution_url
+}
+
+output "streamlit_custom_domain" {
+  description = "Custom domain for the Streamlit app."
+  value       = var.streamlit_domain_name
+}
+
+output "streamlit_custom_cloudfront_url" {
+  description = "Custom CloudFront distribution URL for the Streamlit app."
+  value       = "https://${aws_cloudfront_distribution.streamlit_custom.domain_name}"
+}
+
+output "route53_zone_name_servers" {
+  description = "Name servers for the mamoru.org hosted zone."
+  value       = length(aws_route53_zone.mamoru) > 0 ? aws_route53_zone.mamoru[0].name_servers : []
+}
+
+output "pubmed_ingest_lambda_name" {
+  description = "Lambda function name for PubMed ingest."
+  value       = aws_lambda_function.pubmed_ingest.function_name
+}

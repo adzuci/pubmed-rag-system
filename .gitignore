@@ -7,6 +7,7 @@ crash.*.log
 .terraform.lock.hcl
 terraform.tfvars
 terraform.tfvars.json
+terraform/*.zip
 
 .env:
 __pycache__/
