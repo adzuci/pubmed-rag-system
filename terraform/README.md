@@ -44,6 +44,7 @@ terraform {
 - `streamlit_app_version` (default: `v0.0.1`)
 - `opensearch_admin_principals` (list of IAM principals for OpenSearch access)
 - `streamlit_domain_name` (default: `mamoru.org`)
+- `streamlit_hosted_zone_id` (optional, use an existing Route53 zone)
 - `streamlit_cf_header_name` (default: `X-Verify-Origin`)
 - `streamlit_cf_header_value` (default: `streamlit-CloudFront-Distribution`)
 

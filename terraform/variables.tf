@@ -79,6 +79,12 @@ variable "streamlit_domain_name" {
   default     = "mamoruproject.org"
 }
 
+variable "streamlit_hosted_zone_id" {
+  description = "Existing Route53 hosted zone ID for the Streamlit domain (leave empty to create)."
+  type        = string
+  default     = "Z06494003JKCM4RYNM7JX"
+}
+
 variable "streamlit_cf_header_name" {
   description = "CloudFront custom header name for ALB origin."
   type        = string
@@ -89,5 +95,11 @@ variable "streamlit_cf_header_value" {
   description = "CloudFront custom header value for ALB origin."
   type        = string
   default     = "streamlit-CloudFront-Distribution"
+}
+
+variable "opensearch_endpoint" {
+  description = "Override OpenSearch endpoint for imports (optional)."
+  type        = string
+  default     = ""
 }
 

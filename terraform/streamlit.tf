@@ -4,6 +4,7 @@ module "streamlit_app" {
   app_name            = var.streamlit_app_name
   environment         = "dev"
   app_version         = var.streamlit_app_version
+  ecs_task_desired_image_tag = var.streamlit_app_version
   aws_region          = var.aws_region
   path_to_app_dir     = "${path.module}/../ui"
   path_to_build_spec  = "${path.module}/../ui/buildspec.yml"

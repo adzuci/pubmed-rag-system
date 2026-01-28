@@ -45,5 +45,5 @@ output "streamlit_custom_cloudfront_url" {
 
 output "route53_zone_name_servers" {
   description = "Name servers for the mamoru.org hosted zone."
-  value       = aws_route53_zone.mamoru.name_servers
+  value       = length(aws_route53_zone.mamoru) > 0 ? aws_route53_zone.mamoru[0].name_servers : []
 }

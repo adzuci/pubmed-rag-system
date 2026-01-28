@@ -42,7 +42,7 @@ provider "aws" {
 }
 
 provider "opensearch" {
-  url         = module.bedrock.default_collection.collection_endpoint
+  url         = var.opensearch_endpoint != "" ? var.opensearch_endpoint : module.bedrock.default_collection.collection_endpoint
   healthcheck = false
   aws_region  = var.aws_region
 }

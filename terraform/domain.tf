@@ -1,6 +1,11 @@
+locals {
+  streamlit_zone_id = var.streamlit_hosted_zone_id != "" ? var.streamlit_hosted_zone_id : aws_route53_zone.mamoru[0].zone_id
+}
+
 resource "aws_route53_zone" "mamoru" {
-  name = var.streamlit_domain_name
-  tags = var.tags
+  count = var.streamlit_hosted_zone_id == "" ? 1 : 0
+  name  = var.streamlit_domain_name
+  tags  = var.tags
 }
 
 resource "aws_acm_certificate" "streamlit" {
@@ -18,7 +23,7 @@ resource "aws_route53_record" "streamlit_cert_validation" {
     }
   }
 
-  zone_id = aws_route53_zone.mamoru.zone_id
+  zone_id = local.streamlit_zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60

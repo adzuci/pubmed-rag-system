@@ -25,6 +25,17 @@ data "aws_iam_policy_document" "rag_lambda_policy" {
     actions = [
       "bedrock-agent-runtime:Retrieve",
       "bedrock-agent-runtime:RetrieveAndGenerate",
+      "bedrock:InvokeModel",
+      "bedrock:Retrieve",
+      "bedrock:RetrieveAndGenerate",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    actions = [
+      "aws-marketplace:ViewSubscriptions",
+      "aws-marketplace:Subscribe",
     ]
     resources = ["*"]
   }

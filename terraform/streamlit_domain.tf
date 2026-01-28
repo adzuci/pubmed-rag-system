@@ -53,7 +53,7 @@ resource "aws_cloudfront_distribution" "streamlit_custom" {
 }
 
 resource "aws_route53_record" "streamlit_apex_a" {
-  zone_id = aws_route53_zone.mamoru.zone_id
+  zone_id = local.streamlit_zone_id
   name    = var.streamlit_domain_name
   type    = "A"
 
@@ -65,7 +65,7 @@ resource "aws_route53_record" "streamlit_apex_a" {
 }
 
 resource "aws_route53_record" "streamlit_apex_aaaa" {
-  zone_id = aws_route53_zone.mamoru.zone_id
+  zone_id = local.streamlit_zone_id
   name    = var.streamlit_domain_name
   type    = "AAAA"
 
