@@ -103,3 +103,9 @@ variable "opensearch_endpoint" {
   default     = ""
 }
 
+variable "alert_email" {
+  description = "Email address for CloudWatch alarm notifications."
+  type        = string
+  default     = "adam@blackwell.ai"
+}
+

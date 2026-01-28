@@ -155,5 +155,25 @@ available in CloudWatch Logs under the ECS log group created by the module:
 - Log group: `/ecs/<app_name>-ecs-log-group`
 - Filter example: `fields @timestamp, @message | filter @message like /rag_query:/ | sort @timestamp desc`
 
+## Cleanup
+- `terraform destroy` to remove AWS resources created by this repo.
+- Remove generated S3 data under `s3://<bucket>/raw/` and `s3://<bucket>/processed/` if needed.
+- Unsubscribe and delete SNS topics if you no longer want alerts.
+- Delete ECR images for the Streamlit app if you no longer need the UI.
+
+## Estimated cost
+Main cost drivers (order of magnitude, depends on usage and region):
+- **OpenSearch Serverless** (knowledge base vector store): steady baseline cost even at low traffic.
+- **Streamlit ECS + ALB + CloudFront**: baseline infra cost while running.
+- **Bedrock model usage**: per-request cost; increases with query volume and response size.
+- **S3 + CloudWatch**: usually minor unless data or log volume is large.
+
+## Future Roadmap
+Once the product is considered viable, possible next steps include:
+1. Migrating away from Streamlit to a static React frontend behind a WAF.
+2. Moving the query Lambda logic to EKS or another compute platform that can scale based on load.
+3. Adding auth and per-user rate limits.
+4. Optimizing spend by adding a caching layer and using cheaper models for simpler questions.
+
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).

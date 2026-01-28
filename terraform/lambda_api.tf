@@ -77,6 +77,12 @@ resource "aws_lambda_function" "rag_query" {
   tags = var.tags
 }
 
+resource "aws_cloudwatch_log_group" "rag_lambda" {
+  name              = "/aws/lambda/${aws_lambda_function.rag_query.function_name}"
+  retention_in_days = 14
+  tags              = var.tags
+}
+
 resource "aws_apigatewayv2_api" "rag_api" {
   name          = var.rag_api_name
   protocol_type = "HTTP"
@@ -108,6 +114,11 @@ resource "aws_apigatewayv2_stage" "rag_api" {
   name        = "$default"
   auto_deploy = true
   tags        = var.tags
+
+  default_route_settings {
+    throttling_burst_limit = 10
+    throttling_rate_limit  = 2
+  }
 }
 
 resource "aws_lambda_permission" "rag_api" {

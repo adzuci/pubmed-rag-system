@@ -10,6 +10,9 @@ logger = logging.getLogger("mamoru-ui")
 
 st.set_page_config(page_title="Mamoru Project", page_icon="🧠", layout="wide")
 
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 st.markdown(
     """
 <style>
@@ -72,6 +75,24 @@ with col_right:
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
+def render_chat(history):
+    if not history:
+        return
+    st.markdown("---")
+    st.subheader("Conversation")
+    for entry in history:
+        with st.chat_message("user"):
+            st.write(entry.get("question", ""))
+        with st.chat_message("assistant"):
+            st.write(entry.get("answer", ""))
+            sources = entry.get("sources", [])
+            if sources:
+                st.subheader("Sources")
+                for idx, source in enumerate(sources, start=1):
+                    with st.expander(f"Source {idx}", expanded=False):
+                        st.write(source.get("text", ""))
+                        st.json(source.get("metadata", {}))
+
 if ask:
     if not api_url:
         st.error("Set the API base URL.")
@@ -98,14 +119,12 @@ if ask:
         st.stop()
 
     payload = resp.json()
-    st.markdown("---")
-    st.subheader("Answer")
-    st.write(payload.get("answer", ""))
+    st.session_state.chat_history.append(
+        {
+            "question": question.strip(),
+            "answer": payload.get("answer", ""),
+            "sources": payload.get("sources", []),
+        }
+    )
 
-    sources = payload.get("sources", [])
-    if sources:
-        st.subheader("Sources")
-        for idx, source in enumerate(sources, start=1):
-            with st.expander(f"Source {idx}", expanded=False):
-                st.write(source.get("text", ""))
-                st.json(source.get("metadata", {}))
+render_chat(st.session_state.chat_history)

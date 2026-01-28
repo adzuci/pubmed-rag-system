@@ -47,6 +47,7 @@ terraform {
 - `streamlit_hosted_zone_id` (optional, use an existing Route53 zone)
 - `streamlit_cf_header_name` (default: `X-Verify-Origin`)
 - `streamlit_cf_header_value` (default: `streamlit-CloudFront-Distribution`)
+- `alert_email` (default: `adam@blackwell.ai`)
 
 ## Bedrock Knowledge Base
 This module also provisions an Amazon Bedrock Knowledge Base using the
@@ -66,3 +67,14 @@ Key outputs to note (see `terraform/outputs.tf`):
 - `streamlit_custom_domain`
 - `streamlit_custom_cloudfront_url`
 - `route53_zone_name_servers`
+
+## Rate limiting
+The HTTP API stage applies default throttling (burst 10, rate 2 RPS). If you need
+stronger protections, add AWS WAF rate-based rules in front of API Gateway or
+CloudFront later.
+
+## Alarms
+Terraform configures CloudWatch alarms for:
+- Lambda Errors (RAG API)
+- ALB Target 5XX (Streamlit)
+Alerts are sent to the SNS topic subscribed by `alert_email`.
