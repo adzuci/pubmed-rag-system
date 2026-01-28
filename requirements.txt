@@ -1,0 +1,4 @@
+jupyter
+biopython
+python-dotenv
+boto3
