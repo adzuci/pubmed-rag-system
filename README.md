@@ -43,6 +43,8 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
    - `NCBI_EMAIL=you@example.com`
    - `NCBI_API_KEY=your_key_here` (optional)
    - `S3_BUCKET=your-bucket` (for uploads)
+   - `BEDROCK_KB_ID=kb-XXXXXXXXXX` (for RAG prototype)
+   - `BEDROCK_MODEL_ARN=...` (optional, defaults in notebook)
 3. Launch Jupyter Notebook (no Lab required):
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
@@ -53,9 +55,8 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 - [x] Terraform: S3 buckets (raw + processed)
 - [x] Upload raw PubMed data to S3
 - [x] Enable AWS Bedrock and IAM permissions
-- [ ] Embedding + vector index job
-- [ ] RAG retrieval and answer logic (local)
-- [ ] Lambda inference API (API Gateway)
+- [ ] RAG retrieval and answer logic
+- [ ] Lambda inference API
 - [ ] Streamlit app (local)
 - [ ] Deploy Streamlit with terraform-aws-serverless-streamlit-app
 - [ ] Route 53 domain + HTTPS
@@ -91,6 +92,10 @@ Minimal AWS services (details to be documented in this repo):
 After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:
 - `aws bedrock-agent start-ingestion-job --knowledge-base-id <kb_id> --data-source-id <ds_id>`
 - Check status with `aws bedrock-agent get-ingestion-job ...`
+
+## RAG Prototype (Notebook)
+Use `notebooks/pubmed_rag_prototype.ipynb` for local retrieval and answer generation.
+Set `BEDROCK_KB_ID` (required) and optionally `BEDROCK_MODEL_ARN` in `.env`.
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
