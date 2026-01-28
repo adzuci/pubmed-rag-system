@@ -7,7 +7,6 @@ variable "aws_region" {
 variable "bucket_name" {
   description = "S3 bucket for PubMed data (raw + processed prefixes)."
   type        = string
-  default     = "pubmed-rag-data"
 }
 
 variable "raw_prefix" {

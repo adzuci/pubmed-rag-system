@@ -44,14 +44,14 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
    - `NCBI_API_KEY=your_key_here` (optional)
 3. Launch Jupyter Notebook (no Lab required):
    - `jupyter notebook`
-4. Open `notebooks/pubmed_search_stub.ipynb` and run the cells.
+4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
 
 ## Project checklist
 - [x] Local PubMed ingest (Jupyter notebook)
 - [x] Repo scaffolding and config
-- [ ] Terraform: S3 buckets (raw + processed)
+- [x] Terraform: S3 buckets (raw + processed)
 - [ ] Upload raw PubMed data to S3
-- [ ] Enable AWS Bedrock and IAM permissions
+- [x] Enable AWS Bedrock and IAM permissions
 - [ ] Embedding + vector index job
 - [ ] RAG retrieval and answer logic (local)
 - [ ] Lambda inference API (API Gateway)
@@ -59,6 +59,15 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 - [ ] Deploy Streamlit with terraform-aws-serverless-streamlit-app
 - [ ] Route 53 domain + HTTPS
 - [ ] README, demo prep, and design explanations
+
+## Terraform (What It Provisions)
+Current Terraform covers:
+- **S3** bucket for raw/processed corpus storage
+- **Bedrock Knowledge Base** (vector store backed by OpenSearch Serverless)
+- **S3 data source** scoped to the `processed/` prefix
+- **Secrets Manager** secret for NCBI credentials (`ncbi_email`, `ncbi_api_key`)
+
+Tags are applied via the `tags` variable (default: `project=pubmed-rag-system`, `env=production`).
 
 ## Deployment
 Minimal AWS services (details to be documented in this repo):
