@@ -9,7 +9,7 @@ module "bedrock" {
   kb_description    = "Knowledge base for PubMed RAG system with processed articles"
 
   create_s3_data_source      = true
-  s3_data_source_bucket_name = aws_s3_bucket.data.id
+  kb_s3_data_source          = aws_s3_bucket.data.arn
   s3_inclusion_prefixes      = [var.processed_prefix]
   data_deletion_policy       = "RETAIN"
 

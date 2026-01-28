@@ -42,6 +42,7 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 2. Create a local `.env` (gitignored) with:
    - `NCBI_EMAIL=you@example.com`
    - `NCBI_API_KEY=your_key_here` (optional)
+   - `S3_BUCKET=your-bucket` (for uploads)
 3. Launch Jupyter Notebook (no Lab required):
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
@@ -69,6 +70,10 @@ Current Terraform covers:
 
 Tags are applied via the `tags` variable (default: `project=pubmed-rag-system`, `env=production`).
 
+Required inputs:
+- `bucket_name` (no default)
+- `ncbi_email` (no default)
+
 ## Deployment
 Minimal AWS services (details to be documented in this repo):
 - **S3** for raw/processed corpus storage
@@ -81,6 +86,11 @@ Minimal AWS services (details to be documented in this repo):
 - Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager (no plaintext in repo).
 - Scheduling: use EventBridge to trigger a Lambda (or ECS task) for periodic ingest.
 - Details: `docs/ops/scheduled_ingest.md`
+
+## Bedrock KB Ingestion
+After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:
+- `aws bedrock-agent start-ingestion-job --knowledge-base-id <kb_id> --data-source-id <ds_id>`
+- Check status with `aws bedrock-agent get-ingestion-job ...`
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
