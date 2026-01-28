@@ -10,15 +10,9 @@ It’s often used not for objects, but for people, traditions, and responsibilit
 
 Mamoru Project is built on that idea.
 
-As people age or experience cognitive decline, knowledge doesn’t disappear, it becomes something others must hold, protect, and carry forward. Caregivers, clinicians, and families step into that role every day, often without clear, trustworthy tools to help them make sense of complex medical information.
+As people age or experience cognitive decline, knowledge doesn’t disappear; it becomes something others must hold, protect, and carry forward. Caregivers, clinicians, and families step into that role every day, often without clear, trustworthy tools to help them make sense of complex medical information.
 
 Mamoru Project exists to safeguard knowledge on behalf of those who can’t always access it themselves.
-
-## Overview
-- Ingest PubMed articles with NCBI E-utilities and store raw/processed data in S3.
-- Chunk and embed text with AWS Bedrock and store vectors in Bedrock Knowledge Bases.
-- Serve a single-turn Q&A endpoint via AWS Lambda + API Gateway.
-- Provide a minimal Streamlit UI for querying with sources.
 
 ## Demo
 - Live UI: https://mamoruproject.org/
@@ -30,7 +24,12 @@ Mamoru Project exists to safeguard knowledge on behalf of those who can’t alwa
 
 ![Streamlit UI Screenshot](assets/ui-screenshot.png)
 
-## Architecture Diagram
+## Architecture Overview
+- Ingest PubMed articles with NCBI E-utilities and store raw/processed data in S3.
+- Chunk and embed text with AWS Bedrock and store vectors in Bedrock Knowledge Bases.
+- Serve a single-turn Q&A endpoint via AWS Lambda + API Gateway.
+- Provide a minimal Streamlit UI for querying with sources.
+
 ```mermaid
 flowchart LR
   A[PubMed] -->|ESearch/EFetch| B[Local ingest notebook]
