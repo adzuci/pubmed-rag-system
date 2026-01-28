@@ -20,6 +20,16 @@ Mamoru Project exists to safeguard knowledge on behalf of those who can’t alwa
 - Serve a single-turn Q&A endpoint via AWS Lambda + API Gateway.
 - Provide a minimal Streamlit UI for querying with sources.
 
+## Demo
+- Live UI: https://mamoruproject.org/
+
+## How to use the product
+1. Go to https://mamoruproject.org/
+2. Paste the API base URL (example: `https://pye2ftvvg5.execute-api.us-east-1.amazonaws.com`).
+3. Ask your questions and review the grounded response + sources.
+
+![Streamlit UI Screenshot](assets/ui-screenshot.png)
+
 ## Architecture Diagram
 ```mermaid
 flowchart LR
