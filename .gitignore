@@ -1,3 +1,13 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+.terraform.lock.hcl
+terraform.tfvars
+terraform.tfvars.json
+
 .env:
 __pycache__/
 .ipynb_checkpoints/
@@ -5,6 +15,7 @@ __pycache__/
 venv/
 data/
 notebooks/data/
+notebooks/_runs/
 __pycache__/
 *.py[cod]
 .Python
