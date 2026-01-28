@@ -2,7 +2,7 @@
 
 # Mamoru Project: A PubMed RAG Based System
 
-This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.
+This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.  See our [mock pitch deck](https://docs.google.com/presentation/d/1pU9SLoW5Ash5Qy7y0O62F0xYvQ3ghYX6LY4keAH-xtI/edit?usp=sharing) for more details about where things will go in the future.
 
 ## The Story of Mamoru Project
 Mamoru (守る) is a Japanese verb that means to protect, to safeguard, to watch over.
@@ -23,10 +23,10 @@ Mamoru Project exists to safeguard knowledge on behalf of those who can’t alwa
 ## Demo
 - Live UI: https://mamoruproject.org/
 
-## How to use the product
+## How To Use The Product
 1. Go to https://mamoruproject.org/
 2. Paste the API base URL (example: `https://pye2ftvvg5.execute-api.us-east-1.amazonaws.com`).
-3. Ask your questions and review the grounded response + sources.
+3. Ask your questions and review the response + sources.
 
 ![Streamlit UI Screenshot](assets/ui-screenshot.png)
 
@@ -75,19 +75,6 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 3. Launch Jupyter Notebook (no Lab required):
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
-
-## Project checklist
-- [x] Local PubMed ingest (Jupyter notebook)
-- [x] Repo scaffolding and config
-- [x] Terraform: S3 buckets (raw + processed)
-- [x] Upload raw PubMed data to S3
-- [x] Enable AWS Bedrock and IAM permissions
-- [X] RAG retrieval and answer logic
-- [x] Lambda inference API
-- [x] Streamlit app (local)
-- [x] Deploy Streamlit with terraform-aws-serverless-streamlit-app
-- [x] Route 53 domain + HTTPS
-- [ ] README, demo prep, and design explanations
 
 ## Terraform
 Current Terraform covers:
@@ -185,7 +172,7 @@ available in CloudWatch Logs under the ECS log group created by the module:
 - Unsubscribe and delete SNS topics if you no longer want alerts.
 - Delete ECR images for the Streamlit app if you no longer need the UI.
 
-## Estimated cost
+## Estimated Cost
 Main cost drivers (order of magnitude, depends on usage and region):
 - **OpenSearch Serverless** (knowledge base vector store): steady baseline cost even at low traffic.
 - **Streamlit ECS + ALB + CloudFront**: baseline infra cost while running.
@@ -194,10 +181,11 @@ Main cost drivers (order of magnitude, depends on usage and region):
 
 ## Future Roadmap
 Once the product is considered viable, possible next steps include:
+1. Resolve UI bugs and extra modals in Streamlit app.
+1. Adding auth, encoding the API endpoint and setting per-user rate limits.
 1. Migrating away from Streamlit to a static React frontend behind a WAF.
-2. Moving the query Lambda logic to EKS or another compute platform that can scale based on load.
-3. Adding auth and per-user rate limits.
-4. Optimizing spend by adding a caching layer and using cheaper models for simpler questions.
+1. Moving the query Lambda logic to EKS or another compute platform that can scale based on load.
+1. Optimizing spend by adding a caching layer and using cheaper models for simpler questions.
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
