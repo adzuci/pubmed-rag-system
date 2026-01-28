@@ -2,7 +2,7 @@ PYTHON ?= python
 NOTEBOOK_DIR ?= notebooks
 RUN_DIR ?= notebooks/_runs
 
-.PHONY: precommit-install precommit-run clean-notebooks fetch process
+.PHONY: precommit-install precommit-run clean-notebooks fetch process test
 
 precommit-install:
 	$(PYTHON) -m pre_commit install
@@ -26,3 +26,6 @@ process:
 		--output-dir $(RUN_DIR) \
 		--output pubmed_processing_analysis_run.ipynb \
 		$(NOTEBOOK_DIR)/pubmed_processing_analysis.ipynb
+
+test:
+	$(PYTHON) -m pytest -q

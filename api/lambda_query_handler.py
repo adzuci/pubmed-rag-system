@@ -1,3 +1,13 @@
+"""Lambda handler for RAG query requests.
+
+This function is fronted by API Gateway and calls Bedrock
+`retrieve_and_generate` against a configured knowledge base.
+
+Environment variables:
+    BEDROCK_KB_ID: Knowledge base identifier (required).
+    BEDROCK_MODEL_ARN: Model ARN to use for generation (optional, has default).
+"""
+
 import base64
 import json
 import logging
@@ -18,6 +28,7 @@ client = boto3.client("bedrock-agent-runtime")
 
 
 def _json_response(status_code, payload):
+    """Return an API Gateway compatible JSON response."""
     return {
         "statusCode": status_code,
         "headers": {
@@ -28,6 +39,7 @@ def _json_response(status_code, payload):
 
 
 def _extract_question(event):
+    """Extract the `question` string from a REST or HTTP API event."""
     if event.get("body"):
         body = event["body"]
         if event.get("isBase64Encoded"):
@@ -42,6 +54,9 @@ def _extract_question(event):
 
 
 def handler(event, context):
+    """Entry point for the query Lambda."""
+    del context  # unused
+
     if not KB_ID:
         return _json_response(500, {"error": "BEDROCK_KB_ID is not configured"})
 

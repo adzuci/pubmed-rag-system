@@ -1,3 +1,19 @@
+"""Lambda handler that ingests PubMed records into S3.
+
+This Lambda:
+- Reads NCBI credentials from Secrets Manager.
+- Uses Entrez ESearch/EFetch to retrieve MEDLINE records.
+- Writes formatted text files into the configured S3 `raw/` prefix.
+
+Environment variables:
+    NCBI_SECRET_ARN: ARN of the secret containing NCBI credentials.
+    S3_BUCKET: Destination bucket for raw files.
+    RAW_PREFIX: Prefix under which to write text files (default: raw/).
+    PUBMED_QUERY: Override for the PubMed query string.
+    RETMAX: Max records to retrieve.
+    BATCH_SIZE: EFetch batch size.
+"""
+
 import json
 import logging
 import os
@@ -18,6 +34,7 @@ LOGGER.setLevel(logging.INFO)
 
 
 def _get_secret_value(secret_arn):
+    """Fetch and decode a JSON secret from Secrets Manager."""
     client = boto3.client("secretsmanager")
     resp = client.get_secret_value(SecretId=secret_arn)
     if "SecretString" in resp:
@@ -26,6 +43,7 @@ def _get_secret_value(secret_arn):
 
 
 def _format_record(rec):
+    """Convert a MEDLINE record into a single human-readable text blob."""
     parts = []
     if rec.get("PMID"):
         parts.append(f"PMID: {rec['PMID']}")
@@ -43,6 +61,9 @@ def _format_record(rec):
 
 
 def handler(event, context):
+    """Entry point for the PubMed ingest Lambda."""
+    del event  # unused
+
     secret_arn = os.getenv("NCBI_SECRET_ARN", "")
     bucket = os.getenv("S3_BUCKET", "")
     raw_prefix = os.getenv("RAW_PREFIX", "raw/").rstrip("/") + "/"
