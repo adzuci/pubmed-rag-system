@@ -8,6 +8,10 @@ import streamlit as st
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mamoru-ui")
 
+LOGO_URL = (
+    "https://raw.githubusercontent.com/adzuci/pubmed-rag-system/main/assets/mamoru-project-logo.png"
+)
+
 st.set_page_config(page_title="Mamoru Project", page_icon="🧠", layout="wide")
 
 if "chat_history" not in st.session_state:
@@ -30,6 +34,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.image(LOGO_URL, width=72)
+
 st.markdown(
     """
 <div class="mamoru-hero">
@@ -41,9 +47,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
+def normalize_api_url(value: str) -> str:
+    if not value:
+        return ""
+    cleaned = value.strip()
+    if cleaned.endswith("/query"):
+        cleaned = cleaned[: -len("/query")]
+    if cleaned.endswith("/"):
+        cleaned = cleaned[:-1]
+    if not cleaned.startswith(("http://", "https://")):
+        cleaned = f"https://{cleaned}"
+    return cleaned
+
 with st.sidebar:
     st.header("Configuration")
-    default_api = os.getenv("RAG_API_URL", "").rstrip("/")
+    default_api = (
+        os.getenv("RAG_API_URL")
+        or os.getenv("RAG_API_ENDPOINT")
+        or ""
+    )
+    default_api = normalize_api_url(default_api)
     api_url = st.text_input(
         "API base URL",
         value=default_api,
@@ -54,14 +78,14 @@ with st.sidebar:
 col_left, col_right = st.columns([1.2, 1], gap="large")
 
 with col_left:
-    st.markdown('<div class="mamoru-card">', unsafe_allow_html=True)
+    st.subheader("Ask a question")
     question = st.text_area(
-        "Ask a question",
+        "",
         height=140,
         placeholder="What are common caregiver challenges in dementia care?",
+        label_visibility="collapsed",
     )
     ask = st.button("Ask", type="primary")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div class="mamoru-card">', unsafe_allow_html=True)
@@ -94,6 +118,7 @@ def render_chat(history):
                         st.json(source.get("metadata", {}))
 
 if ask:
+    api_url = normalize_api_url(api_url)
     if not api_url:
         st.error("Set the API base URL.")
         st.stop()
@@ -114,6 +139,12 @@ if ask:
             st.error(f"Request failed: {exc}")
             st.stop()
 
+    if resp.status_code == 404:
+        st.error(
+            "API returned 404. Double-check the base URL (no /query suffix) "
+            "and include https://."
+        )
+        st.stop()
     if resp.status_code != 200:
         st.error(f"API error ({resp.status_code}): {resp.text}")
         st.stop()

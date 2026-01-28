@@ -1,6 +1,6 @@
 data "archive_file" "rag_lambda" {
   type        = "zip"
-  source_file = "${path.module}/../api/lambda_handler.py"
+  source_file = "${path.module}/../api/lambda_query_handler.py"
   output_path = "${path.module}/rag_lambda.zip"
 }
 
@@ -59,7 +59,7 @@ resource "aws_iam_role_policy" "rag_lambda" {
 resource "aws_lambda_function" "rag_query" {
   function_name = "${var.rag_api_name}-query"
   role          = aws_iam_role.rag_lambda.arn
-  handler       = "lambda_handler.handler"
+  handler       = "lambda_query_handler.handler"
   runtime       = "python3.11"
   timeout       = 30
   memory_size   = 512

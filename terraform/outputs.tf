@@ -47,3 +47,8 @@ output "route53_zone_name_servers" {
   description = "Name servers for the mamoru.org hosted zone."
   value       = length(aws_route53_zone.mamoru) > 0 ? aws_route53_zone.mamoru[0].name_servers : []
 }
+
+output "pubmed_ingest_lambda_name" {
+  description = "Lambda function name for PubMed ingest."
+  value       = aws_lambda_function.pubmed_ingest.function_name
+}

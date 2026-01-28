@@ -111,20 +111,34 @@ expecting ACM validation to complete.
      - `AWS_REGION=us-east-1`
      - `ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)`
      - `REPO_NAME=pubmed-rag-ui-repo`
-     - `IMAGE_TAG=v0.0.1`
+     - `IMAGE_TAG=v0.0.2`
      - `aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com`
      - `docker build -t $REPO_NAME:$IMAGE_TAG ui/`
      - `docker tag $REPO_NAME:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG`
      - `docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG`
+   - When updating `ui/app.py`, repeat this image build/push step and keep `streamlit_app_version` in `terraform/variables.tf` aligned with `IMAGE_TAG` before applying.
 
 3) **Phase 2: apply the rest**
    - `terraform plan`
    - `terraform apply`
 
+4) **Set the NCBI secret value**
+   - The Terraform apply creates the secret but does not populate values.
+   - Console:
+     - Open the secret in Secrets Manager and set the JSON value for `ncbi_email` and `ncbi_api_key`:
+       - `{"ncbi_email":"you@example.com","ncbi_api_key":"REPLACE_ME"}`
+   - CLI (example):
+     - `aws secretsmanager put-secret-value --secret-id pubmed-ncbi-credentials --secret-string '{"ncbi_email":"you@example.com","ncbi_api_key":"REPLACE_ME"}'`
+
 ## Secrets + Scheduling
 - Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager (no plaintext in repo).
 - Scheduling: use EventBridge to trigger a Lambda (or ECS task) for periodic ingest.
 - Details: `docs/ops/scheduled_ingest.md`
+
+## Manual ingest trigger
+Invoke the ingest Lambda manually to pull new PubMed records into `raw/`:
+- `aws lambda invoke --function-name <pubmed_ingest_lambda_name> --payload '{}' /tmp/ingest.json`
+- Adjust query or limits by updating Terraform variables: `pubmed_query`, `pubmed_retmax`, `pubmed_batch_size`
 
 ## Bedrock KB Ingestion
 After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:

@@ -13,5 +13,8 @@ module "bedrock" {
   s3_inclusion_prefixes      = [var.processed_prefix]
   data_deletion_policy       = "RETAIN"
 
+  number_of_shards   = "2"
+  number_of_replicas = "0"
+
   tags = var.tags
 }

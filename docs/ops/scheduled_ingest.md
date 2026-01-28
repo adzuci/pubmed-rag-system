@@ -26,6 +26,15 @@ Recommended for small periodic jobs.
 4) Configure an EventBridge rule (cron or rate) to trigger the Lambda.
 5) Write raw results to `s3://<bucket>/raw/` and processed to `s3://<bucket>/processed/`.
 
+## Manual trigger (CLI)
+Invoke the ingest Lambda on-demand:
+- `aws lambda invoke --function-name <pubmed_ingest_lambda_name> --payload '{}' /tmp/ingest.json`
+
+Update query and batch settings via Terraform inputs:
+- `pubmed_query`
+- `pubmed_retmax`
+- `pubmed_batch_size`
+
 Minimal schedule examples:
 - Hourly: `rate(1 hour)`
 - Daily at 02:00 UTC: `cron(0 2 * * ? *)`

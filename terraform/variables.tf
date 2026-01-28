@@ -64,7 +64,7 @@ variable "streamlit_app_name" {
 variable "streamlit_app_version" {
   description = "Version tag for the Streamlit app container."
   type        = string
-  default     = "v0.0.1"
+  default     = "v0.0.2"
 }
 
 variable "opensearch_admin_principals" {
@@ -107,5 +107,25 @@ variable "alert_email" {
   description = "Email address for CloudWatch alarm notifications."
   type        = string
   default     = "adam@blackwell.ai"
+}
+
+variable "pubmed_query" {
+  description = "PubMed query for ingestion."
+  type        = string
+  default     = <<EOT
+("Dementia"[Mesh] OR "Mild Cognitive Impairment"[Mesh]) AND ("Decision Support Systems, Clinical"[Mesh] OR "Caregivers"[Mesh] OR caregiver*[tiab] OR "decision support"[tiab])
+EOT
+}
+
+variable "pubmed_retmax" {
+  description = "Max number of PubMed records to ingest."
+  type        = number
+  default     = 500
+}
+
+variable "pubmed_batch_size" {
+  description = "Batch size for PubMed efetch."
+  type        = number
+  default     = 100
 }
 
