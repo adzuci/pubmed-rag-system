@@ -51,7 +51,7 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 - [x] Local PubMed ingest (Jupyter notebook)
 - [x] Repo scaffolding and config
 - [x] Terraform: S3 buckets (raw + processed)
-- [ ] Upload raw PubMed data to S3
+- [x] Upload raw PubMed data to S3
 - [x] Enable AWS Bedrock and IAM permissions
 - [ ] Embedding + vector index job
 - [ ] RAG retrieval and answer logic (local)
