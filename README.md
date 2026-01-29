@@ -82,7 +82,7 @@ This repo includes a `Makefile` with common development tasks. To get started:
 - Run the Streamlit UI locally:
   - `make run-ui` (loads `.env` if present, then starts Streamlit)
 
-See `Makefile` for all available targets: `precommit-install`, `precommit-run`, `clean-notebooks`, `fetch`, `process`, `test`, `run-ui`, `build-ui-image`, `bump-patch`, `bump-minor`, `bump-major`, `tag-release`.
+See `Makefile` for all available targets: `precommit-install`, `precommit-run`, `clean-notebooks`, `test`, `run-ui`, `run-fetch`, `run-process`, `terraform-init`, `terraform-validate`, `terraform-plan`, `terraform-apply`, `build-push-ui`, `bump-patch`, `bump-minor`, `bump-major`, `tag-release`.
 
 If you want to propose changes, open a pull request so it can be reviewed rather than pushing directly to main.
 
@@ -138,6 +138,7 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
    - `BEDROCK_KB_ID=kb-XXXXXXXXXX`
    - `BEDROCK_MODEL_ARN=...` (optional)
    - `RAG_API_URL=...` (optional, Streamlit UI)
+   - `OPENSEARCH_ADMIN_PRINCIPAL=arn:aws:iam::ACCOUNT_ID:user/USERNAME` or `arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME` (optional, for Terraform OpenSearch access; auto-detected from current AWS identity)
 3. Launch Jupyter Notebook:
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
@@ -168,33 +169,48 @@ Required inputs:
 See `terraform/README.md` for detailed Terraform documentation.
 
 ### Deployment
-If you want to build/push the Streamlit image yourself, do a two-phase apply:
 
 **Note**: Ensure your domain registrar (e.g. `mamoruproject.org`) points to the correct Route 53 hosted zone (or add the domain manually in your DNS provider) before expecting ACM validation to complete.
 
-1) **Phase 1: core infra**
-   - Example:
-     - `terraform plan -target=aws_s3_bucket.data -target=aws_s3_bucket_versioning.data -target=aws_s3_bucket_server_side_encryption_configuration.data -target=aws_s3_bucket_public_access_block.data -target=aws_secretsmanager_secret.ncbi_credentials -target=aws_secretsmanager_secret_version.ncbi_credentials -target=module.bedrock -target=aws_iam_role.rag_lambda -target=aws_iam_role_policy.rag_lambda -target=aws_lambda_function.rag_query -target=aws_apigatewayv2_api.rag_api -target=aws_apigatewayv2_integration.rag_api -target=aws_apigatewayv2_route.rag_query -target=aws_apigatewayv2_stage.rag_api -target=aws_lambda_permission.rag_api`
-     - `terraform apply`
+#### Using Makefile Targets
 
-2) **Build, tag, and push the Streamlit image to ECR**
-   - Use the Makefile target: `make build-ui-image`
-   - Or manually:
-     - `AWS_REGION=us-east-1`
-     - `ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)`
-     - `REPO_NAME=pubmed-rag-ui-repo`
-     - `IMAGE_TAG=vX.Y.Z` (use the version from `VERSION`)
-     - `aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com`
-     - `docker build -t $REPO_NAME:$IMAGE_TAG ui/`
-     - `docker tag $REPO_NAME:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG`
-     - `docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG`
-   - When updating `ui/app.py`, repeat this image build/push step and keep `streamlit_app_version` in `terraform/variables.tf` aligned with `IMAGE_TAG` before applying.
+The Makefile provides convenient targets for Terraform operations:
 
-3) **Phase 2: apply the rest**
-   - `terraform plan`
-   - `terraform apply`
+- `make terraform-init` - Initialize Terraform (run once, or after adding providers)
+- `make terraform-validate` - Validate Terraform configuration
+- `make terraform-plan` - Show planned changes
+- `make terraform-apply` - Apply Terraform changes
+- `make build-push-ui` - Build and push Streamlit Docker image to ECR
 
-4) **Set the NCBI secret value**
+#### Deployment Steps
+
+1) **Initialize Terraform** (first time only):
+   ```bash
+   make terraform-init
+   ```
+
+2) **Plan and apply core infrastructure**:
+   ```bash
+   make terraform-plan
+   make terraform-apply
+   ```
+   
+   For a two-phase apply (if needed), use targeted plans:
+   ```bash
+   cd terraform
+   terraform plan -target=aws_s3_bucket.data -target=aws_s3_bucket_versioning.data -target=aws_s3_bucket_server_side_encryption_configuration.data -target=aws_s3_bucket_public_access_block.data -target=aws_secretsmanager_secret.ncbi_credentials -target=aws_secretsmanager_secret_version.ncbi_credentials -target=module.bedrock -target=aws_iam_role.rag_lambda -target=aws_iam_role_policy.rag_lambda -target=aws_lambda_function.rag_query -target=aws_apigatewayv2_api.rag_api -target=aws_apigatewayv2_integration.rag_api -target=aws_apigatewayv2_route.rag_query -target=aws_apigatewayv2_stage.rag_api -target=aws_lambda_permission.rag_api
+   terraform apply
+   ```
+
+3) **Build and push Streamlit image** (when updating UI):
+   ```bash
+   make build-push-ui
+   ```
+   After building the image, run `make terraform-apply` to update the infrastructure with the new image version.
+
+   **Note**: When updating `ui/app.py`, ensure `streamlit_app_version` in `terraform/variables.tf` is aligned with `VERSION` before applying. The `build-push-ui` target uses `VERSION` automatically.
+
+4) **Set the NCBI secret value**:
    - The Terraform apply creates the secret but does not populate values.
    - Console:
      - Open the secret in Secrets Manager and set the JSON value for `ncbi_email` and `ncbi_api_key`:
@@ -232,6 +248,23 @@ After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:
 - Check status with `aws bedrock-agent get-ingestion-job ...`
 
 The knowledge base uses a curated subset of dementia and caregiver-related peer-reviewed articles from PubMed to inform research-backed answers.
+
+#### Troubleshooting OpenSearch Permissions
+If you encounter a 403 Forbidden error when creating the OpenSearch index, the access policy may need to be refreshed. The policy should automatically include your current user ARN, but if issues persist:
+
+1. Verify your user ARN is in the access policy:
+   ```bash
+   aws opensearchserverless get-access-policy --name os-access-pubmed-rag-api --type data --region us-east-1
+   ```
+
+2. If needed, manually update the policy to include your user ARN (the policy name format is `os-access-<prefix>` where prefix is the first 16 chars of `rag_api_name`).
+
+3. Ensure `OPENSEARCH_ADMIN_PRINCIPAL` in `.env` matches your IAM user or SSO role ARN (optional, as it's auto-detected from `aws sts get-caller-identity`). For SSO users, you may need to add the SSO role ARN explicitly:
+   ```bash
+   # Find your SSO role ARN
+   aws iam list-roles --query "Roles[?contains(RoleName, 'SSO')].Arn" --output text
+   # Add it to .env as OPENSEARCH_ADMIN_PRINCIPAL
+   ```
 
 ## Domain + DNS
 Terraform can register `mamoru.org`, create a hosted zone, request an ACM cert
