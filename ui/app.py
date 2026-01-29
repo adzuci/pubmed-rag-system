@@ -4,6 +4,7 @@ import re
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 logging.basicConfig(level=logging.INFO)
@@ -23,19 +24,24 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # Google Analytics tracking
-st.markdown(
-    """
+# Note: Streamlit does not reliably execute <script> tags via st.markdown(),
+# so use components.html() to ensure the tag loads.
+GA_MEASUREMENT_ID = os.getenv("GA_MEASUREMENT_ID", "G-3TZ2EQTPMP").strip()
+if GA_MEASUREMENT_ID:
+    components.html(
+        f"""
 <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3TZ2EQTPMP"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
+  function gtag(){{dataLayer.push(arguments);}}
   gtag('js', new Date());
-  gtag('config', 'G-3TZ2EQTPMP');
+  gtag('config', '{GA_MEASUREMENT_ID}');
 </script>
 """,
-    unsafe_allow_html=True,
-)
+        height=0,
+        width=0,
+    )
 
 st.markdown(
     """
