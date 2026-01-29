@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import requests
 import streamlit as st
@@ -56,7 +57,7 @@ st.markdown(
   .main { background-color: var(--bg-primary); }
   .block-container { 
     padding-top: 0.5rem; 
-    padding-bottom: 150px; 
+    padding-bottom: 120px; 
     max-width: 900px; 
     margin: 0 auto; 
     background-color: var(--bg-primary);
@@ -95,9 +96,27 @@ st.markdown(
   
   /* Chat container */
   .chat-container { 
-    min-height: calc(100vh - 400px); 
-    padding-bottom: 150px; 
+    min-height: auto; 
+    padding-bottom: 2rem; 
     background-color: var(--bg-primary);
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+  }
+  
+  /* Status message area (above input, ChatGPT-like) */
+  .status-message-container {
+    position: fixed;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    z-index: 99;
+    pointer-events: none;
+  }
+  .status-message-container > div {
+    pointer-events: auto;
   }
   
   /* Fixed input at bottom */
@@ -168,7 +187,7 @@ st.markdown(
   /* Welcome message */
   .welcome-message { 
     text-align: center; 
-    padding: 2rem 1rem 3rem; 
+    padding: 2rem 1rem 1.5rem; 
     background-color: var(--bg-primary);
     margin-top: 1rem;
   }
@@ -186,7 +205,8 @@ st.markdown(
   
   /* Sample questions */
   .sample-questions { 
-    margin-top: 2rem; 
+    margin-top: 1rem; 
+    margin-bottom: 1rem;
     max-width: 700px;
     margin-left: auto;
     margin-right: auto;
@@ -240,9 +260,44 @@ st.markdown(
   [data-testid="stExpander"] {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
+    margin-top: 1rem;
   }
   [data-testid="stExpander"] summary {
     color: var(--text-secondary);
+    font-weight: 600;
+  }
+  /* Sources styling */
+  .sources-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+  .source-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  .source-button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: var(--button-primary);
+    color: var(--button-text);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+  .source-button:hover {
+    background-color: var(--button-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  }
+  .source-button:active {
+    transform: translateY(0);
   }
   
   /* Error messages */
@@ -300,16 +355,31 @@ st.markdown(
   }
 </style>
 <script>
-  // Make Enter key trigger submit
+  // Make Enter key trigger submit (ChatGPT-like behavior)
   function setupEnterKey() {
     const inputs = document.querySelectorAll('input[data-testid="stTextInput"]');
     inputs.forEach(input => {
+      // Use a one-time flag to prevent duplicate listeners
+      if (input.dataset.enterHandlerAttached === 'true') {
+        return;
+      }
+      input.dataset.enterHandlerAttached = 'true';
+      
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          const buttons = document.querySelectorAll('button[kind="primaryFormSubmit"]');
-          if (buttons.length > 0) {
-            buttons[buttons.length - 1].click();
+          // Find the Ask button - try multiple selectors
+          let askButton = document.querySelector('button[kind="primaryFormSubmit"]');
+          if (!askButton) {
+            // Fallback: find button with "Ask" text near the input
+            const inputContainer = input.closest('.input-wrapper') || input.closest('.input-container');
+            if (inputContainer) {
+              const buttons = Array.from(inputContainer.querySelectorAll('button'));
+              askButton = buttons.find(btn => btn.textContent.trim() === 'Ask');
+            }
+          }
+          if (askButton) {
+            askButton.click();
           }
         }
       });
@@ -324,6 +394,42 @@ st.markdown(
   // Also setup after Streamlit reruns
   const observer = new MutationObserver(setupEnterKey);
   observer.observe(document.body, { childList: true, subtree: true });
+  
+  // Auto-scroll to bottom when new messages appear
+  function autoScroll() {
+    // Try to scroll the chat container
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    // Also scroll the main block container
+    const blockContainer = document.querySelector('.block-container');
+    if (blockContainer) {
+      blockContainer.scrollTop = blockContainer.scrollHeight;
+    }
+    // Also scroll window to bottom (for mobile/fallback)
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
+  }
+  
+  // Run on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(autoScroll, 200);
+    });
+  } else {
+    setTimeout(autoScroll, 200);
+  }
+  
+  // Also scroll after Streamlit reruns (when new content is added)
+  const scrollObserver = new MutationObserver(() => {
+    setTimeout(autoScroll, 300);
+  });
+  scrollObserver.observe(document.body, { childList: true, subtree: true });
+  
+  // Also listen for Streamlit's custom events
+  window.addEventListener('load', () => setTimeout(autoScroll, 300));
 </script>
 """,
     unsafe_allow_html=True,
@@ -370,16 +476,30 @@ with st.sidebar:
         placeholder="https://api-id.execute-api.us-east-1.amazonaws.com",
         help="The base URL for the RAG API endpoint (without /query suffix)",
     )
+
+    # Read version from VERSION file (in repo root)
+    try:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        version_file = os.path.join(repo_root, "VERSION")
+        with open(version_file, "r") as f:
+            image_version = f.read().strip()
+    except Exception:
+        image_version = "unknown"
+
+    st.text_input(
+        "Image version",
+        value=f"v{image_version}",
+        disabled=True,
+        help="Current UI container image version",
+    )
+
     st.markdown("---")
     st.subheader("ℹ️ How it works")
     st.markdown(
         """
-This service is built on top of a database of relevant PubMed article abstracts 
-focused on dementia care and caregiving. When you ask a question:
-
-1. **Retrieval**: Searches the knowledge base for relevant abstracts and clinical evidence
-2. **Generation**: Uses AI to synthesize an evidence-based answer from the retrieved sources
-3. **Citation**: Provides source citations so you can verify and explore further
+This service searches a knowledge base of PubMed articles on dementia care. 
+When you ask a question, it retrieves relevant abstracts and clinical evidence, 
+synthesizes an evidence-based answer, and provides source links for verification.
 
 Built with AWS Bedrock Knowledge Bases, OpenSearch Serverless, and Claude. 
 
@@ -402,12 +522,10 @@ def render_chat(history):
         )
 
         st.markdown('<div class="sample-questions">', unsafe_allow_html=True)
-        st.markdown("#### Try a sample question")
         samples = [
             "What are evidence-based strategies for managing sleep disturbances in people with dementia?",
             "What does the research say about caregiver burden in early-stage Alzheimer's disease?",
             "Are there effective non-pharmacological interventions for agitation in dementia patients?",
-            "What interventions help reduce caregiver stress and burnout?",
         ]
 
         for idx, sample in enumerate(samples):
@@ -425,18 +543,92 @@ def render_chat(history):
         with st.chat_message("assistant"):
             st.write(entry.get("answer", ""))
             sources = entry.get("sources", [])
+            # Debug: log sources to help diagnose
             if sources:
-                with st.expander(f"📚 Sources ({len(sources)})", expanded=False):
-                    for idx, source in enumerate(sources, start=1):
-                        st.markdown(f"**Source {idx}**")
-                        st.write(source.get("text", ""))
-                        st.json(source.get("metadata", {}))
+                logger.info(f"Found {len(sources)} sources for entry")
+                logger.info(
+                    f"First source structure: {sources[0] if sources else 'None'}"
+                )
+            if sources and len(sources) > 0:
+                st.markdown('<div class="sources-container">', unsafe_allow_html=True)
+                st.markdown(f"**📚 Sources ({len(sources)})**")
+                st.markdown('<div class="source-buttons">', unsafe_allow_html=True)
+                for idx, source in enumerate(sources, start=1):
+                    # Handle both dict and direct metadata access
+                    if isinstance(source, dict):
+                        metadata = source.get("metadata", {}) or {}
+                        # Also check if metadata is nested or flat
+                        if not metadata and isinstance(source.get("metadata"), dict):
+                            metadata = source.get("metadata", {})
+                    else:
+                        metadata = {}
+
+                    # Try multiple ways to get PMID
+                    pmid = None
+                    if isinstance(metadata, dict):
+                        pmid = (
+                            metadata.get("pmid")
+                            or metadata.get("PMID")
+                            or metadata.get("id")
+                        )
+                    title = (
+                        metadata.get("title", "") if isinstance(metadata, dict) else ""
+                    )
+
+                    if pmid:
+                        # Create PubMed URL
+                        pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}"
+                        # Use title if available, otherwise use "View on PubMed"
+                        button_text = (
+                            title[:60] + "..."
+                            if title and len(title) > 60
+                            else (title or f"View on PubMed (PMID: {pmid})")
+                        )
+                        # Create clickable button
+                        st.markdown(
+                            f'<a href="{pubmed_url}" target="_blank" rel="noopener noreferrer" class="source-button">📄 {button_text}</a>',
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        # Fallback - show debug info and try to extract from text
+                        source_text = (
+                            source.get("text", "")
+                            if isinstance(source, dict)
+                            else str(source)
+                        )
+                        # Try to find PMID in text (common pattern: "PMID: 12345678")
+                        pmid_match = re.search(
+                            r"PMID[:\s]+(\d+)", source_text, re.IGNORECASE
+                        )
+                        if pmid_match:
+                            pmid = pmid_match.group(1)
+                            pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}"
+                            preview = f"View on PubMed (PMID: {pmid})"
+                            st.markdown(
+                                f'<a href="{pubmed_url}" target="_blank" rel="noopener noreferrer" class="source-button">📄 {preview}</a>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            preview = (
+                                (source_text[:50] + "...")
+                                if source_text and len(source_text) > 50
+                                else "View source"
+                            )
+                            st.markdown(
+                                f'<span class="source-button" style="opacity: 0.7; cursor: default;">📄 {preview}</span>',
+                                unsafe_allow_html=True,
+                            )
+                st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Chat container with scrolling
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 render_chat(st.session_state.chat_history)
 st.markdown("</div>", unsafe_allow_html=True)
+
+# Status message area (above input, ChatGPT-like)
+status_container = st.empty()
 
 # Fixed input area at bottom
 st.markdown('<div class="input-container">', unsafe_allow_html=True)
@@ -482,16 +674,28 @@ if ask or auto_submit:
 
     logger.info("rag_query: %s", question.strip())
 
-    with st.spinner("Retrieving sources and drafting answer..."):
-        try:
-            resp = requests.post(
-                f"{api_url}/query",
-                json={"question": question.strip()},
-                timeout=30,
-            )
-        except requests.RequestException as exc:
-            st.error(f"Request failed: {exc}")
-            st.stop()
+    # Show retrieving message above input (ChatGPT-like)
+    with status_container.container():
+        st.markdown(
+            '<div style="text-align: center; color: var(--text-muted); padding: 0.75rem 1rem; font-size: 0.9em;">'
+            "🔄 Retrieving sources and drafting answer..."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    try:
+        resp = requests.post(
+            f"{api_url}/query",
+            json={"question": question.strip()},
+            timeout=30,
+        )
+    except requests.RequestException as exc:
+        status_container.empty()
+        st.error(f"Request failed: {exc}")
+        st.stop()
+
+    # Clear status message
+    status_container.empty()
 
     if resp.status_code == 404:
         st.error(
@@ -504,11 +708,17 @@ if ask or auto_submit:
         st.stop()
 
     payload = resp.json()
+    # Debug: log payload structure
+    logger.info(f"API response keys: {payload.keys()}")
+    logger.info(f"Sources in payload: {payload.get('sources', [])}")
+    sources_list = payload.get("sources", [])
+    if not isinstance(sources_list, list):
+        sources_list = []
     st.session_state.chat_history.append(
         {
             "question": question.strip(),
             "answer": payload.get("answer", ""),
-            "sources": payload.get("sources", []),
+            "sources": sources_list,
         }
     )
     # Clear auto_submit and rerun to show new answer (input will be empty on rerun)
