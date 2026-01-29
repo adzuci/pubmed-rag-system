@@ -294,32 +294,8 @@ st.markdown(
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
   }
-  .source-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-  }
-  .source-button {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background-color: var(--button-primary);
-    color: var(--button-text);
-    text-decoration: none;
-    border-radius: 6px;
-    font-size: 0.9em;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-  }
-  .source-button:hover {
-    background-color: var(--button-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
-  }
-  .source-button:active {
-    transform: translateY(0);
+  .sources-container [data-testid="stExpander"] {
+    margin-bottom: 0.5rem;
   }
   
   /* Error messages */
@@ -608,16 +584,18 @@ def render_chat(history):
             if sources and len(sources) > 0:
                 st.markdown('<div class="sources-container">', unsafe_allow_html=True)
                 st.markdown(f"**📚 Sources ({len(sources)})**")
-                st.markdown('<div class="source-buttons">', unsafe_allow_html=True)
                 for idx, source in enumerate(sources, start=1):
                     # Handle both dict and direct metadata access
+                    source_text = ""
                     if isinstance(source, dict):
                         metadata = source.get("metadata", {}) or {}
+                        source_text = source.get("text", "") or ""
                         # Also check if metadata is nested or flat
                         if not metadata and isinstance(source.get("metadata"), dict):
                             metadata = source.get("metadata", {})
                     else:
                         metadata = {}
+                        source_text = str(source) if source else ""
 
                     # Try multiple ways to get PMID
                     pmid = None
@@ -631,50 +609,39 @@ def render_chat(history):
                         metadata.get("title", "") if isinstance(metadata, dict) else ""
                     )
 
-                    if pmid:
-                        # Create PubMed URL
-                        pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}"
-                        # Use title if available, otherwise use "View on PubMed"
-                        button_text = (
-                            title[:60] + "..."
-                            if title and len(title) > 60
-                            else (title or f"View on PubMed (PMID: {pmid})")
-                        )
-                        # Create clickable button
-                        st.markdown(
-                            f'<a href="{pubmed_url}" target="_blank" rel="noopener noreferrer" class="source-button">📄 {button_text}</a>',
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        # Fallback - show debug info and try to extract from text
-                        source_text = (
-                            source.get("text", "")
-                            if isinstance(source, dict)
-                            else str(source)
-                        )
-                        # Try to find PMID in text (common pattern: "PMID: 12345678")
+                    # Try to find PMID in text if not in metadata
+                    if not pmid and source_text:
                         pmid_match = re.search(
                             r"PMID[:\s]+(\d+)", source_text, re.IGNORECASE
                         )
                         if pmid_match:
                             pmid = pmid_match.group(1)
+
+                    # Create expander with source content
+                    expander_label = f"Source {idx}"
+                    if title:
+                        expander_label = f"Source {idx}: {title[:50]}{'...' if len(title) > 50 else ''}"
+                    elif pmid:
+                        expander_label = f"Source {idx} (PMID: {pmid})"
+
+                    with st.expander(expander_label, expanded=False):
+                        # Show abstract/text
+                        if source_text:
+                            st.markdown("**Abstract:**")
+                            st.markdown(source_text)
+
+                        # Show metadata if available
+                        if metadata:
+                            st.markdown("**Metadata:**")
+                            st.json(metadata)
+
+                        # Show PubMed link if PMID available
+                        if pmid:
                             pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}"
-                            preview = f"View on PubMed (PMID: {pmid})"
                             st.markdown(
-                                f'<a href="{pubmed_url}" target="_blank" rel="noopener noreferrer" class="source-button">📄 {preview}</a>',
+                                f'<a href="{pubmed_url}" target="_blank" rel="noopener noreferrer" style="color: var(--button-primary);">🔗 View on PubMed</a>',
                                 unsafe_allow_html=True,
                             )
-                        else:
-                            preview = (
-                                (source_text[:50] + "...")
-                                if source_text and len(source_text) > 50
-                                else "View source"
-                            )
-                            st.markdown(
-                                f'<span class="source-button" style="opacity: 0.7; cursor: default;">📄 {preview}</span>',
-                                unsafe_allow_html=True,
-                            )
-                st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
 
 

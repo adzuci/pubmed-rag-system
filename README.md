@@ -2,7 +2,7 @@
 
 # Mamoru Project: A PubMed RAG Based System
 
-This project builds a retrieval-augmented generation (RAG) system over PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.  See our [mock pitch deck](https://docs.google.com/presentation/d/1pU9SLoW5Ash5Qy7y0O62F0xYvQ3ghYX6LY4keAH-xtI/edit?usp=sharing) for more details about where things will go in the future.
+This project builds a retrieval-augmented generation system using papers from PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature.  See our [mock pitch deck](https://docs.google.com/presentation/d/1pU9SLoW5Ash5Qy7y0O62F0xYvQ3ghYX6LY4keAH-xtI/edit?usp=sharing) for more details about where things will go in the future.
 
 ## The Story of Mamoru Project
 Mamoru (守る) is a Japanese verb that means to protect, to safeguard, to watch over.
@@ -11,11 +11,6 @@ It’s often used not for objects, but for people, traditions, and responsibilit
 Mamoru Project is built on that idea.
 
 As people age or experience cognitive decline, knowledge doesn’t disappear; it becomes something others must hold, protect, and carry forward. Caregivers, clinicians, and families step into that role every day, often without clear, trustworthy tools to help them make sense of complex medical information.
-
-Mamoru Project exists to safeguard knowledge on behalf of those who can’t always access it themselves.
-
-## Demo
-- Live UI: https://mamoruproject.org/
 
 ## How To Use The Product
 1. Go to https://mamoruproject.org/
