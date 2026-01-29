@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mamoru-ui")
 
 LOGO_URL = "https://raw.githubusercontent.com/adzuci/pubmed-rag-system/main/assets/mamoru-project-logo.png"
+DEFAULT_RAG_API_URL = "https://pye2ftvvg5.execute-api.us-east-1.amazonaws.com"
 
 st.set_page_config(page_title="Mamoru Project", page_icon="🧠", layout="wide")
 
@@ -44,6 +45,7 @@ st.markdown(
 <div class="mamoru-hero">
   <h1>Mamoru Project</h1>
   <p class="mamoru-muted">Safeguarding clinical knowledge for dementia care through grounded answers and trusted sources.</p>
+  <p class="mamoru-muted" style="font-size: 0.9em; margin-top: 0.5rem;">This system uses a curated subset of dementia and caregiver-related peer-reviewed articles from PubMed to inform research-backed answers.</p>
 </div>
 """,
     unsafe_allow_html=True,
@@ -66,6 +68,8 @@ def normalize_api_url(value: str) -> str:
 with st.sidebar:
     st.header("Configuration")
     default_api = os.getenv("RAG_API_URL") or os.getenv("RAG_API_ENDPOINT") or ""
+    if not default_api:
+        default_api = DEFAULT_RAG_API_URL
     default_api = normalize_api_url(default_api)
     api_url = st.text_input(
         "API base URL",

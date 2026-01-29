@@ -91,9 +91,9 @@ Your role is to:
 Use the retrieved sources to ground your response. If the sources don't directly address the question, say so honestly rather than speculating.
 
 Retrieved sources:
-{search_results}
+$search_results$
 
-Question: {input}
+Question: $input$
 
 Based on the provided sources, please answer the question above."""
                         }

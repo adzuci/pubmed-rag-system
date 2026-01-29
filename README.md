@@ -68,23 +68,63 @@ in a chaperoned fashion ([source](https://www.youtube.com/watch?v=YuA_9x1aSZ4)).
 I intentionally skipped adding full static typing to the Python code here, but in a longer-lived production service I would normally add type hints and a type checker (for example, mypy or Pyright) to keep the codebase safer to change.
 
 ## Contributing
-To work on this repo:
+This repo includes a `Makefile` with common development tasks. To get started:
+
 - Create and activate a virtual environment:
   - `python -m venv .venv`
-  - `source .venv/bin/activate`
+  - `source .venv/bin/activate` (or `.venv\Scripts\activate` on Windows)
 - Install dependencies:
   - `pip install -r requirements.txt`
 - Set up pre-commit hooks:
   - `make precommit-install`
-- Run tests and basic checks:
+- Run tests:
   - `make test`
+- Run the Streamlit UI locally:
+  - `make run-ui` (loads `.env` if present, then starts Streamlit)
+
+See `Makefile` for all available targets: `precommit-install`, `precommit-run`, `clean-notebooks`, `fetch`, `process`, `test`, `run-ui`, `build-ui-image`, `bump-patch`, `bump-minor`, `bump-major`, `tag-release`.
 
 If you want to propose changes, open a pull request so it can be reviewed rather than pushing directly to main.
 
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
 
-## Local Data Ingestion
+## Local Development
+
+### Running Streamlit UI Locally
+Use the Makefile target for convenience:
+```bash
+make run-ui
+```
+
+Or run manually:
+1. **Set up environment** (if not already done):
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+2. **Install UI dependencies**:
+   ```bash
+   pip install -r ui/requirements.txt
+   ```
+
+3. **Configure API endpoint** (optional):
+   - Set `RAG_API_URL` in your `.env` file or export it:
+     ```bash
+     export RAG_API_URL=https://pye2ftvvg5.execute-api.us-east-1.amazonaws.com
+     ```
+   - Or leave it unset and paste the API URL in the sidebar when the app starts.
+
+4. **Run the Streamlit app**:
+   ```bash
+   streamlit run ui/app.py
+   ```
+   The app will open in your browser at `http://localhost:8501`.
+
+**Note**: The app requires a valid RAG API endpoint to function. Deploy the Lambda + API Gateway via Terraform first, or use an existing endpoint.
+
+### Local Data Ingestion
 You can run ingestion locally in a Jupyter notebook for quick iteration:
 
 1. Create and activate a virtual environment, then install requirements:
@@ -102,14 +142,22 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
    - `jupyter notebook`
 4. Open `notebooks/pubmed_search_and_fetch.ipynb` and run the cells.
 
-As the project evolves, more tests can be around new handlers, data parsers, and any non-trivial logic before wiring them into production workflows.
+### RAG Prototype (Notebook)
+Use `notebooks/pubmed_rag_prototype.ipynb` for local retrieval and answer generation.
+Set `BEDROCK_KB_ID` (required) and optionally `BEDROCK_MODEL_ARN` in `.env`.
 
-## Terraform
+## Infrastructure
+
+### Terraform
 Current Terraform covers:
 - **S3** bucket for raw/processed corpus storage
 - **Bedrock Knowledge Base** (vector store backed by OpenSearch Serverless)
 - **S3 data source** scoped to the `processed/` prefix
 - **Secrets Manager** secret for NCBI credentials (`ncbi_email`, `ncbi_api_key`)
+- **Lambda functions** for ingest and RAG query
+- **API Gateway** HTTP API for RAG queries
+- **Streamlit app** (serverless via ECS/Fargate)
+- **Route53 + CloudFront** for custom domain
 
 Tags are applied via the `tags` variable (default: `project=pubmed-rag-system`, `env=production`).
 
@@ -117,13 +165,12 @@ Required inputs:
 - `bucket_name` (no default)
 - `ncbi_email` (no default)
 
-## Deployment
-If you want to build/push the Streamlit image yourself, do a
-two-phase apply:
+See `terraform/README.md` for detailed Terraform documentation.
 
-Note: ensure your domain registrar (e.g. `mamoruproject.org`) points to the correct
-Route 53 hosted zone (or add the domain manually in your DNS provider) before
-expecting ACM validation to complete.
+### Deployment
+If you want to build/push the Streamlit image yourself, do a two-phase apply:
+
+**Note**: Ensure your domain registrar (e.g. `mamoruproject.org`) points to the correct Route 53 hosted zone (or add the domain manually in your DNS provider) before expecting ACM validation to complete.
 
 1) **Phase 1: core infra**
    - Example:
@@ -131,8 +178,8 @@ expecting ACM validation to complete.
      - `terraform apply`
 
 2) **Build, tag, and push the Streamlit image to ECR**
-   - The repo name is `${streamlit_app_name}-repo`
-   - Example:
+   - Use the Makefile target: `make build-ui-image`
+   - Or manually:
      - `AWS_REGION=us-east-1`
      - `ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)`
      - `REPO_NAME=pubmed-rag-ui-repo`
@@ -155,30 +202,36 @@ expecting ACM validation to complete.
    - CLI (example):
      - `aws secretsmanager put-secret-value --secret-id pubmed-ncbi-credentials --secret-string '{"ncbi_email":"you@example.com","ncbi_api_key":"REPLACE_ME"}'`
 
-## Secrets + Scheduling
-- Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager (no plaintext in repo).
-- Scheduling: use EventBridge to trigger a Lambda (or ECS task) for periodic ingest.
-- Details: `docs/ops/scheduled_ingest.md`
+### RAG API + Streamlit UI
+Terraform provisions a Lambda-backed HTTP API for RAG queries and an optional serverless Streamlit app. The UI can use the API endpoint from Terraform outputs:
+- `rag_api_endpoint` (HTTP API base URL)
+- `streamlit_cloudfront_url` (Streamlit UI URL)
 
-## Manual ingest trigger
+### Domain + DNS
+Terraform can register `mamoru.org`, create a hosted zone, request an ACM cert (us-east-1), and map the apex domain to a custom CloudFront distribution that fronts the Streamlit app. Provide `domain_contact` details in Terraform inputs.
+
+Note: This repo is configured to use an existing hosted zone ID for `mamoruproject.org` so the apex A/AAAA records are created in the active zone.
+
+## Data Pipeline
+
+### PubMed Ingest
+
+#### Manual Ingest Trigger
 Invoke the ingest Lambda manually to pull new PubMed records into `raw/`:
 - `aws lambda invoke --function-name <pubmed_ingest_lambda_name> --payload '{}' /tmp/ingest.json`
 - Adjust query or limits by updating Terraform variables: `pubmed_query`, `pubmed_retmax`, `pubmed_batch_size`
 
-## Bedrock KB Ingestion
+#### Secrets + Scheduling
+- Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager (no plaintext in repo).
+- Scheduling: use EventBridge to trigger a Lambda (or ECS task) for periodic ingest.
+- Details: `docs/ops/scheduled_ingest.md`
+
+### Bedrock Knowledge Base Ingestion
 After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:
 - `aws bedrock-agent start-ingestion-job --knowledge-base-id <kb_id> --data-source-id <ds_id>`
 - Check status with `aws bedrock-agent get-ingestion-job ...`
 
-## RAG Prototype (Notebook)
-Use `notebooks/pubmed_rag_prototype.ipynb` for local retrieval and answer generation.
-Set `BEDROCK_KB_ID` (required) and optionally `BEDROCK_MODEL_ARN` in `.env`.
-
-## RAG API + Streamlit UI
-Terraform provisions a Lambda-backed HTTP API for RAG queries and an optional
-serverless Streamlit app. The UI can use the API endpoint from Terraform outputs:
-- `rag_api_endpoint` (HTTP API base URL)
-- `streamlit_cloudfront_url` (Streamlit UI URL)
+The knowledge base uses a curated subset of dementia and caregiver-related peer-reviewed articles from PubMed to inform research-backed answers.
 
 ## Domain + DNS
 Terraform can register `mamoru.org`, create a hosted zone, request an ACM cert
@@ -207,12 +260,33 @@ Main cost drivers (order of magnitude, depends on usage and region):
 - **Bedrock model usage**: per-request cost; increases with query volume and response size.
 - **S3 + CloudWatch**: usually minor unless data or log volume is large.
 
+## Operations
+
+### Query Logs (Streamlit)
+The Streamlit UI logs each question to stdout. When deployed, these logs are available in CloudWatch Logs under the ECS log group created by the module:
+- Log group: `/ecs/<app_name>-ecs-log-group`
+- Filter example: `fields @timestamp, @message | filter @message like /rag_query:/ | sort @timestamp desc`
+
+### Cleanup
+- `terraform destroy` to remove AWS resources created by this repo.
+- Remove generated S3 data under `s3://<bucket>/raw/` and `s3://<bucket>/processed/` if needed.
+- Unsubscribe and delete SNS topics if you no longer want alerts.
+- Delete ECR images for the Streamlit app if you no longer need the UI.
+
+### Estimated Cost
+Main cost drivers (order of magnitude, depends on usage and region):
+- **OpenSearch Serverless** (knowledge base vector store): steady baseline cost even at low traffic.
+- **Streamlit ECS + ALB + CloudFront**: baseline infra cost while running.
+- **Bedrock model usage**: per-request cost; increases with query volume and response size.
+- **S3 + CloudWatch**: usually minor unless data or log volume is large.
+
 ## Future Roadmap
 Once the product is considered viable, possible next steps include:
-1. Resolve UI bugs and extra modals in Streamlit app.
 1. Adding auth, encoding the API endpoint and setting per-user rate limits.
 1. Migrating away from Streamlit to a static React frontend behind a WAF, and reviewing CIS benchmarks / hardening the production environment.
 1. Creating a dedicated stage environment and wiring up CI/CD to promote changes from stage to prod.
 1. Locking down credentials further (e.g., narrower IAM policies, secret rotation).
 1. Expanding test coverage for Lambdas, data parsing, and infra integration flows.
 1. Adding a GitHub Actions CI job to run `make test`, linting, and `terraform validate` on every pull request.
+1. Implementing LangChain evaluation framework to measure RAG quality (faithfulness, answer relevance, context precision) and track improvements over time.
+1. Expanding ingest to pull full article content from PubMed Central (PMC) when available, falling back to abstracts for articles without open access full text.

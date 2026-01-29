@@ -8,7 +8,7 @@ REPO_NAME ?= pubmed-rag-ui-repo
 VERSION ?= $(shell cat VERSION 2>/dev/null)
 IMAGE_TAG ?= v$(VERSION)
 
-.PHONY: precommit-install precommit-run clean-notebooks fetch process test build-ui-image bump-patch bump-minor bump-major tag-release
+.PHONY: precommit-install precommit-run clean-notebooks fetch process test build-ui-image run-ui bump-patch bump-minor bump-major tag-release
 
 precommit-install:
 	$(PYTHON) -m pre_commit install
@@ -36,6 +36,10 @@ process:
 test:
 	# Export variables from .env (if present) into the test environment.
 	set -a; [ -f .env ] && . .env; set +a; PYTHONPATH=. $(PYTHON) -m pytest -q
+
+run-ui:
+	@# Export variables from .env (if present) into the Streamlit environment.
+	set -a; [ -f .env ] && . .env; set +a; streamlit run ui/app.py
 
 build-ui-image:
 	@if [ -z "$(VERSION)" ]; then \
