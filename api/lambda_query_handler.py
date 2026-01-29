@@ -1,3 +1,13 @@
+"""Lambda handler for RAG query requests.
+
+This function is fronted by API Gateway and calls Bedrock
+`retrieve_and_generate` against a configured knowledge base.
+
+Environment variables:
+    BEDROCK_KB_ID: Knowledge base identifier (required).
+    BEDROCK_MODEL_ARN: Model ARN to use for generation (optional, has default).
+"""
+
 import base64
 import json
 import logging
@@ -18,6 +28,7 @@ client = boto3.client("bedrock-agent-runtime")
 
 
 def _json_response(status_code, payload):
+    """Return an API Gateway compatible JSON response."""
     return {
         "statusCode": status_code,
         "headers": {
@@ -28,6 +39,7 @@ def _json_response(status_code, payload):
 
 
 def _extract_question(event):
+    """Extract the `question` string from a REST or HTTP API event."""
     if event.get("body"):
         body = event["body"]
         if event.get("isBase64Encoded"):
@@ -42,6 +54,9 @@ def _extract_question(event):
 
 
 def handler(event, context):
+    """Entry point for the query Lambda."""
+    del context  # unused
+
     if not KB_ID:
         return _json_response(500, {"error": "BEDROCK_KB_ID is not configured"})
 
@@ -62,6 +77,30 @@ def handler(event, context):
                     "retrievalConfiguration": {
                         "vectorSearchConfiguration": {"numberOfResults": 5}
                     },
+                    "generationConfiguration": {
+                        "promptTemplate": {
+                            "textPromptTemplate": """You are Mamoru, a compassionate and knowledgeable assistant helping caregivers and clinicians understand dementia care based on peer-reviewed clinical literature from PubMed.
+
+CRITICAL INSTRUCTIONS:
+- Be concise when appropriate
+- Do NOT mention "Source 1", "Source 2", etc. in your response
+- Do NOT reference sources by number or name
+- Do NOT say "the sources show" or "according to the sources"
+- Simply provide the answer directly, as if you are stating facts
+- Be clear and empathetic
+- Focus on the most relevant findings
+- If sources don't address the question, say so briefly
+
+The sources will be displayed separately below your answer, so do not reference them in your text.
+
+Retrieved sources:
+$search_results$
+
+Question: $input$
+
+Provide a direct answer without mentioning sources:"""
+                        }
+                    },
                 },
             },
         )
@@ -79,6 +118,25 @@ def handler(event, context):
                     "metadata": ref.get("metadata", {}),
                 }
             )
+
+    if not sources:
+        try:
+            retrieval = client.retrieve(
+                knowledgeBaseId=KB_ID,
+                retrievalQuery={"text": question},
+                retrievalConfiguration={
+                    "vectorSearchConfiguration": {"numberOfResults": 5}
+                },
+            )
+            for item in retrieval.get("retrievalResults", []):
+                sources.append(
+                    {
+                        "text": item.get("content", {}).get("text", ""),
+                        "metadata": item.get("metadata", {}),
+                    }
+                )
+        except Exception:
+            LOGGER.exception("rag_query_retrieve_failed")
 
     return _json_response(
         200,

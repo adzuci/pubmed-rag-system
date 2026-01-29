@@ -1,0 +1,51 @@
+name: Lint and validate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r ui/requirements.txt
+
+      - name: Run pre-commit checks (includes black)
+        run: make precommit-run
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform validate
+        run: |
+          terraform -chdir=terraform init -backend=false
+          # Patch bedrock module for provider changes:
+          # 1) data.aws_region.current.region -> data.aws_region.current.name
+          #    (aws_region data source now exposes "name" not "region")
+          find terraform/.terraform/modules/bedrock -name "*.tf" -type f -exec sed -i 's/data\.aws_region\.current\.region/data.aws_region.current.name/g' {} \;
+          # Fix bedrock module bug: local.name is undefined in version 0.0.33
+          # The module uses local.name for region in ARNs but doesn't define it
+          # Replace with var.aws_region (passed to module) or add local definition
+          # First, try to add local.name to locals block if it exists
+          if [ -f terraform/.terraform/modules/bedrock/locals.tf ]; then
+            # Check if name is already defined
+            if ! grep -qE '^\s*name\s*=' terraform/.terraform/modules/bedrock/locals.tf; then
+              # Add name = var.aws_region after first locals { line
+              sed -i '/^locals {/a\  name = var.aws_region' terraform/.terraform/modules/bedrock/locals.tf
+            fi
+          fi
+          # Also replace direct references as fallback
+          find terraform/.terraform/modules/bedrock -name "*.tf" -type f -exec sed -i 's/\${local\.name}/\${var.aws_region}/g' {} \;
+          find terraform/.terraform/modules/bedrock -name "*.tf" -type f -exec sed -i 's/local\.name/var.aws_region/g' {} \;
+          terraform -chdir=terraform validate

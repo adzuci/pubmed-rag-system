@@ -1,6 +1,10 @@
-jupyter
-biopython
-python-dotenv
-boto3
-pre-commit
-nbstripout
+jupyter==1.1.1
+biopython==1.86
+python-dotenv==1.2.1
+boto3==1.42.36
+pre-commit==4.5.1
+nbstripout==0.9.0
+# TODO: Move testing dependencies to a separate requirements-dev.txt or similar.
+pytest==9.0.2
+black==24.10.0
+bump2version==1.0.1

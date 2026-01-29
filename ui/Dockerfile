@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ARG VERSION=0.0.0
+ENV APP_VERSION=${VERSION}
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -13,6 +16,8 @@ RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
 COPY . .
+# Write version to file for app to read
+RUN echo "${VERSION}" > VERSION
 
 EXPOSE 8501
 
