@@ -78,7 +78,10 @@ This repo includes a `Makefile` with common development tasks. To get started:
 
 See `Makefile` for all available targets: `precommit-install`, `precommit-run`, `clean-notebooks`, `test`, `run-ui`, `run-fetch`, `run-process`, `terraform-init`, `terraform-validate`, `terraform-plan`, `terraform-apply`, `build-push-ui`, `bump-patch`, `bump-minor`, `bump-major`, `tag-release`.
 
-If you want to propose changes, open a pull request so it can be reviewed rather than pushing directly to main.
+If you want to propose changes, open a pull request so it can be reviewed.
+
+## ADRs
+Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
 
 ## GitHub Actions
 Workflows live in `.github/workflows/`:
@@ -94,15 +97,12 @@ Workflows live in `.github/workflows/`:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 
-## ADRs
-Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
-
 ## Local Development
 
 ### Running Streamlit UI Locally
 Use the Makefile target for convenience:
 ```bash
-make run-ui
+make build-push-ui && make run-ui
 ```
 
 Or run manually:
@@ -146,7 +146,7 @@ You can run ingestion locally in a Jupyter notebook for quick iteration:
 
 ### RAG Prototype (Notebook)
 Use `notebooks/pubmed_rag_prototype.ipynb` for local retrieval and answer generation.
-Set `BEDROCK_KB_ID` (required) and optionally `BEDROCK_MODEL_ARN` in `.env`.
+Set `BEDROCK_KB_ID` and `BEDROCK_MODEL_ARN` in `.env`.
 
 ## Infrastructure
 
@@ -156,7 +156,7 @@ Current Terraform covers:
 - **Bedrock Knowledge Base** (vector store backed by OpenSearch Serverless)
 - **S3 data source** scoped to the `processed/` prefix
 - **Secrets Manager** secret for NCBI credentials (`ncbi_email`, `ncbi_api_key`)
-- **Lambda functions** for ingest and RAG query
+- **Lambda functions** for ingest and query
 - **API Gateway** HTTP API for RAG queries
 - **Streamlit app** (serverless via ECS/Fargate)
 - **Route53 + CloudFront** for custom domain
@@ -203,13 +203,16 @@ The Makefile provides convenient targets for Terraform operations:
    terraform apply
    ```
 
-3) **Build and push Streamlit image** (when updating UI):
+3) **Build and push Streamlit image**:
    ```bash
+   make bump-patch  # Bump version first (or bump-minor/bump-major)
    make build-push-ui
    ```
+   **Important**: Always bump the version (`make bump-patch`, `make bump-minor`, or `make bump-major`) before deploying a new image. This ensures ECS pulls the new image instead of using a cached version. The version is automatically passed to Docker as a build argument and written to the container.
+   
    After building the image, run `make terraform-apply` to update the infrastructure with the new image version.
 
-   **Note**: When updating `ui/app.py`, ensure `streamlit_app_version` in `terraform/variables.tf` is aligned with `VERSION` before applying. The `build-push-ui` target uses `VERSION` automatically.
+   **Note**: When updating `ui/app.py`, ensure `streamlit_app_version` in `terraform/variables.tf` is aligned with `VERSION` before applying. The `build-push-ui` target uses `VERSION` automatically, and `bump2version` updates both files.
 
 4) **Set the NCBI secret value**:
    - The Terraform apply creates the secret but does not populate values.
@@ -224,11 +227,6 @@ Terraform provisions a Lambda-backed HTTP API for RAG queries and an optional se
 - `rag_api_endpoint` (HTTP API base URL)
 - `streamlit_cloudfront_url` (Streamlit UI URL)
 
-### Domain + DNS
-Terraform can register `mamoru.org`, create a hosted zone, request an ACM cert (us-east-1), and map the apex domain to a custom CloudFront distribution that fronts the Streamlit app. Provide `domain_contact` details in Terraform inputs.
-
-Note: This repo is configured to use an existing hosted zone ID for `mamoruproject.org` so the apex A/AAAA records are created in the active zone.
-
 ## Data Pipeline
 
 ### PubMed Ingest
@@ -238,17 +236,12 @@ Invoke the ingest Lambda manually to pull new PubMed records into `raw/`:
 - `aws lambda invoke --function-name <pubmed_ingest_lambda_name> --payload '{}' /tmp/ingest.json`
 - Adjust query or limits by updating Terraform variables: `pubmed_query`, `pubmed_retmax`, `pubmed_batch_size`
 
+The knowledge base uses a curated subset of dementia and caregiver-related peer-reviewed articles from PubMed to inform research-backed answers.
+
 #### Secrets + Scheduling
-- Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager (no plaintext in repo).
+- Secrets: store `NCBI_EMAIL` and `NCBI_API_KEY` in AWS Secrets Manager
 - Scheduling: use EventBridge to trigger a Lambda (or ECS task) for periodic ingest.
 - Details: `docs/ops/scheduled_ingest.md`
-
-### Bedrock Knowledge Base Ingestion
-After uploading JSONL to `s3://<bucket>/processed/`, start an ingestion job:
-- `aws bedrock-agent start-ingestion-job --knowledge-base-id <kb_id> --data-source-id <ds_id>`
-- Check status with `aws bedrock-agent get-ingestion-job ...`
-
-The knowledge base uses a curated subset of dementia and caregiver-related peer-reviewed articles from PubMed to inform research-backed answers.
 
 #### Troubleshooting OpenSearch Permissions
 If you encounter a 403 Forbidden error when creating the OpenSearch index, the access policy may need to be refreshed. The policy should automatically include your current user ARN, but if issues persist:
@@ -266,33 +259,6 @@ If you encounter a 403 Forbidden error when creating the OpenSearch index, the a
    aws iam list-roles --query "Roles[?contains(RoleName, 'SSO')].Arn" --output text
    # Add it to .env as OPENSEARCH_ADMIN_PRINCIPAL
    ```
-
-## Domain + DNS
-Terraform can register `mamoru.org`, create a hosted zone, request an ACM cert
-(us-east-1), and map the apex domain to a custom CloudFront distribution that
-fronts the Streamlit app. Provide `domain_contact` details in Terraform inputs.
-
-Note: This repo is configured to use an existing hosted zone ID for
-`mamoruproject.org` so the apex A/AAAA records are created in the active zone.
-
-## Query Logs (Streamlit)
-The Streamlit UI logs each question to stdout. When deployed, these logs are
-available in CloudWatch Logs under the ECS log group created by the module:
-- Log group: `/ecs/<app_name>-ecs-log-group`
-- Filter example: `fields @timestamp, @message | filter @message like /rag_query:/ | sort @timestamp desc`
-
-## Cleanup
-- `terraform destroy` to remove AWS resources created by this repo.
-- Remove generated S3 data under `s3://<bucket>/raw/` and `s3://<bucket>/processed/` if needed.
-- Unsubscribe and delete SNS topics if you no longer want alerts.
-- Delete ECR images for the Streamlit app if you no longer need the UI.
-
-## Estimated Cost
-Main cost drivers (order of magnitude, depends on usage and region):
-- **OpenSearch Serverless** (knowledge base vector store): steady baseline cost even at low traffic.
-- **Streamlit ECS + ALB + CloudFront**: baseline infra cost while running.
-- **Bedrock model usage**: per-request cost; increases with query volume and response size.
-- **S3 + CloudWatch**: usually minor unless data or log volume is large.
 
 ## Operations
 

@@ -30,4 +30,6 @@ jobs:
       - name: Terraform validate
         run: |
           terraform -chdir=terraform init -backend=false
+          sed -i 's/\.region/.name/g' terraform/.terraform/modules/bedrock/data.tf
+          sed -i 's/\.region/.name/g' terraform/.terraform/modules/bedrock/iam.tf
           terraform -chdir=terraform validate
