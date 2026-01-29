@@ -38,7 +38,7 @@ st.markdown(
     """
 <div class="mamoru-hero">
   <span class="mamoru-pill">Mamoru Project</span>
-  <h1>PubMed RAG Prototype</h1>
+  <h1>Mamoru</h1>
   <p class="mamoru-muted">Safeguarding clinical knowledge for dementia care through grounded answers and trusted sources.</p>
 </div>
 """,
@@ -69,21 +69,7 @@ with st.sidebar:
         placeholder="https://api-id.execute-api.us-east-1.amazonaws.com",
     )
     st.caption("Set `RAG_API_URL` to prefill this.")
-
-col_left, col_right = st.columns([1.2, 1], gap="large")
-
-with col_left:
-    st.subheader("Ask a question")
-    question = st.text_area(
-        "",
-        height=140,
-        placeholder="What are common caregiver challenges in dementia care?",
-        label_visibility="collapsed",
-    )
-    ask = st.button("Ask", type="primary")
-
-with col_right:
-    st.markdown('<div class="mamoru-card">', unsafe_allow_html=True)
+    st.markdown("---")
     st.subheader("How it works")
     st.markdown(
         """
@@ -92,29 +78,68 @@ with col_right:
 - Returns a single-turn, grounded response
 """
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_chat(history):
+    """Render chat history in a scrollable container."""
     if not history:
+        st.info(
+            "Ask a question to get started. I’ll help you find evidence-based answers about dementia care."
+        )
+
+        st.markdown("#### Try a sample question")
+        samples = [
+            "What are evidence-based strategies for managing sleep disturbances in people with dementia?",
+            "What does the research say about caregiver burden in early-stage Alzheimer’s disease?",
+            "Are there effective non-pharmacological interventions for agitation in dementia patients?",
+            "What interventions help reduce caregiver stress and burnout?",
+        ]
+
+        cols = st.columns(2, gap="small")
+        for idx, sample in enumerate(samples):
+            col = cols[idx % 2]
+            if col.button(sample, use_container_width=True, key=f"sample_{idx}"):
+                st.session_state["question_input"] = sample
+                st.session_state["auto_submit"] = True
+                st.rerun()
         return
-    st.markdown("---")
-    st.subheader("Conversation")
-    for entry in history:
-        with st.chat_message("user"):
-            st.write(entry.get("question", ""))
-        with st.chat_message("assistant"):
-            st.write(entry.get("answer", ""))
-            sources = entry.get("sources", [])
-            if sources:
-                st.subheader("Sources")
-                for idx, source in enumerate(sources, start=1):
-                    with st.expander(f"Source {idx}", expanded=False):
-                        st.write(source.get("text", ""))
-                        st.json(source.get("metadata", {}))
+
+    # Create a scrollable container for chat
+    chat_container = st.container()
+    with chat_container:
+        for entry in history:
+            with st.chat_message("user"):
+                st.write(entry.get("question", ""))
+            with st.chat_message("assistant"):
+                st.write(entry.get("answer", ""))
+                sources = entry.get("sources", [])
+                if sources:
+                    with st.expander(f"📚 Sources ({len(sources)})", expanded=False):
+                        for idx, source in enumerate(sources, start=1):
+                            st.markdown(f"**Source {idx}**")
+                            st.write(source.get("text", ""))
+                            st.json(source.get("metadata", {}))
 
 
-if ask:
+# Render chat history first (scrollable)
+render_chat(st.session_state.chat_history)
+
+# Input area at the bottom (fixed)
+st.markdown("---")
+with st.container():
+    col1, col2 = st.columns([10, 1])
+    with col1:
+        question = st.text_input(
+            "",
+            placeholder="Ask a question about dementia care...",
+            label_visibility="collapsed",
+            key="question_input",
+        )
+    with col2:
+        ask = st.button("Ask", type="primary", use_container_width=True)
+
+auto_submit = bool(st.session_state.get("auto_submit"))
+if ask or auto_submit:
     api_url = normalize_api_url(api_url)
     if not api_url:
         st.error("Set the API base URL.")
@@ -154,5 +179,7 @@ if ask:
             "sources": payload.get("sources", []),
         }
     )
-
-render_chat(st.session_state.chat_history)
+    # Clear the input and rerun to show new answer
+    st.session_state["auto_submit"] = False
+    st.session_state["question_input"] = ""
+    st.rerun()

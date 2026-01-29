@@ -81,6 +81,9 @@ To work on this repo:
 
 If you want to propose changes, open a pull request so it can be reviewed rather than pushing directly to main.
 
+## ADRs
+Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
+
 ## Local Data Ingestion
 You can run ingestion locally in a Jupyter notebook for quick iteration:
 
@@ -213,6 +216,3 @@ Once the product is considered viable, possible next steps include:
 1. Locking down credentials further (e.g., narrower IAM policies, secret rotation).
 1. Expanding test coverage for Lambdas, data parsing, and infra integration flows.
 1. Adding a GitHub Actions CI job to run `make test`, linting, and `terraform validate` on every pull request.
-
-## ADRs
-Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
