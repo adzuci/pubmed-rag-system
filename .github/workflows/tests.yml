@@ -30,6 +30,22 @@ jobs:
       - name: Terraform validate
         run: |
           terraform -chdir=terraform init -backend=false
-          sed -i 's/\.region/.name/g' terraform/.terraform/modules/bedrock/data.tf
-          sed -i 's/\.region/.name/g' terraform/.terraform/modules/bedrock/iam.tf
+          # Patch bedrock module for provider changes:
+          # 1) data.aws_region.current.region -> data.aws_region.current.name
+          #    (aws_region data source now exposes "name" not "region")
+          find terraform/.terraform/modules/bedrock -name "*.tf" -type f -exec sed -i 's/data\.aws_region\.current\.region/data.aws_region.current.name/g' {} \;
+          # Fix bedrock module bug: local.name is undefined in version 0.0.33
+          # The module uses local.name for region in ARNs but doesn't define it
+          # Replace with var.aws_region (passed to module) or add local definition
+          # First, try to add local.name to locals block if it exists
+          if [ -f terraform/.terraform/modules/bedrock/locals.tf ]; then
+            # Check if name is already defined
+            if ! grep -qE '^\s*name\s*=' terraform/.terraform/modules/bedrock/locals.tf; then
+              # Add name = var.aws_region after first locals { line
+              sed -i '/^locals {/a\  name = var.aws_region' terraform/.terraform/modules/bedrock/locals.tf
+            fi
+          fi
+          # Also replace direct references as fallback
+          find terraform/.terraform/modules/bedrock -name "*.tf" -type f -exec sed -i 's/\${local\.name}/\${var.aws_region}/g' {} \;
+          find terraform/.terraform/modules/bedrock -name "*.tf" -type f -exec sed -i 's/local\.name/var.aws_region/g' {} \;
           terraform -chdir=terraform validate
