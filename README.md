@@ -296,7 +296,7 @@ Main cost drivers (order of magnitude, depends on usage and region):
 
 ## Operations
 
-### Query Logs (Streamlit)
+### Query Logs
 The Streamlit UI logs each question to stdout. When deployed, these logs are available in CloudWatch Logs under the ECS log group created by the module:
 - Log group: `/ecs/<app_name>-ecs-log-group`
 - Filter example: `fields @timestamp, @message | filter @message like /rag_query:/ | sort @timestamp desc`
@@ -308,11 +308,17 @@ The Streamlit UI logs each question to stdout. When deployed, these logs are ava
 - Delete ECR images for the Streamlit app if you no longer need the UI.
 
 ### Estimated Cost
-Main cost drivers (order of magnitude, depends on usage and region):
-- **OpenSearch Serverless** (knowledge base vector store): steady baseline cost even at low traffic.
-- **Streamlit ECS + ALB + CloudFront**: baseline infra cost while running.
-- **Bedrock model usage**: per-request cost; increases with query volume and response size.
-- **S3 + CloudWatch**: usually minor unless data or log volume is large.
+Order-of-magnitude estimates (us-east-1). Assumptions: 500 documents ingested,
+weekly ingest run, 100–1,000 Q&A requests per month, and a single Streamlit task.
+
+- **Baseline infra** (OpenSearch Serverless + ECS/ALB + CloudFront): ~`$75–$200/mo`
+  even with light traffic.
+- **Bedrock per-request**: typically `low cents` per request.
+  Roughly `~$1–$10/mo` for ~100 queries, `~$10–$100/mo` for ~1,000 queries
+  (depends on model choice and response length).
+- **Ingest processing (Lambda)**: usually `<$1–$5/mo` for a small weekly run.
+  If you run daily or process thousands of documents, expect `~$5–$20/mo`.
+- **S3 + CloudWatch**: usually `a few dollars` unless data or logs grow large.
 
 ## Future Roadmap
 Once the product is considered viable, possible next steps include:
@@ -321,6 +327,5 @@ Once the product is considered viable, possible next steps include:
 1. Creating a dedicated stage environment and wiring up CI/CD to promote changes from stage to prod.
 1. Locking down credentials further (e.g., narrower IAM policies, secret rotation).
 1. Expanding test coverage for Lambdas, data parsing, and infra integration flows.
-1. Adding a GitHub Actions CI job to run `make test`, linting, and `terraform validate` on every pull request.
 1. Implementing LangChain evaluation framework to measure RAG quality (faithfulness, answer relevance, context precision) and track improvements over time.
-1. Expanding ingest to pull full article content from PubMed Central (PMC) when available, falling back to abstracts for articles without open access full text.
+1. Expanding ingest to pull full article content from PubMed Central when available, falling back to abstracts for articles without open access full text.

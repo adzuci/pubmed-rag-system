@@ -82,14 +82,14 @@ def handler(event, context):
                             "textPromptTemplate": """You are Mamoru, a compassionate and knowledgeable assistant helping caregivers and clinicians understand dementia care based on peer-reviewed clinical literature from PubMed.
 
 CRITICAL INSTRUCTIONS:
-- Provide a BRIEF answer (2-3 sentences maximum)
+- Be concise when appropriate
 - Do NOT mention "Source 1", "Source 2", etc. in your response
 - Do NOT reference sources by number or name
 - Do NOT say "the sources show" or "according to the sources"
 - Simply provide the answer directly, as if you are stating facts
 - Be clear and empathetic
 - Focus on the most relevant findings
-- If sources don't address the question, say so briefly (1-2 sentences)
+- If sources don't address the question, say so briefly
 
 The sources will be displayed separately below your answer, so do not reference them in your text.
 
@@ -98,7 +98,7 @@ $search_results$
 
 Question: $input$
 
-Provide a brief, direct answer (2-3 sentences) without mentioning sources:"""
+Provide a direct answer without mentioning sources:"""
                         }
                     },
                 },
@@ -118,6 +118,25 @@ Provide a brief, direct answer (2-3 sentences) without mentioning sources:"""
                     "metadata": ref.get("metadata", {}),
                 }
             )
+
+    if not sources:
+        try:
+            retrieval = client.retrieve(
+                knowledgeBaseId=KB_ID,
+                retrievalQuery={"text": question},
+                retrievalConfiguration={
+                    "vectorSearchConfiguration": {"numberOfResults": 5}
+                },
+            )
+            for item in retrieval.get("retrievalResults", []):
+                sources.append(
+                    {
+                        "text": item.get("content", {}).get("text", ""),
+                        "metadata": item.get("metadata", {}),
+                    }
+                )
+        except Exception:
+            LOGGER.exception("rag_query_retrieve_failed")
 
     return _json_response(
         200,

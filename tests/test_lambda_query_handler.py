@@ -14,13 +14,19 @@ with patch("boto3.client", return_value=mock_boto3_client):
 
 
 class DummyClient:
-    def __init__(self, response):
+    def __init__(self, response, retrieval_response=None):
         self._response = response
+        self._retrieval_response = retrieval_response or {}
 
     def retrieve_and_generate(self, **kwargs):  # noqa: D401
         """Return a canned Bedrock response."""
         self.last_kwargs = kwargs
         return self._response
+
+    def retrieve(self, **kwargs):  # noqa: D401
+        """Return a canned Bedrock retrieve response."""
+        self.retrieve_kwargs = kwargs
+        return self._retrieval_response
 
 
 def test_handler_returns_answer_and_sources(monkeypatch):
@@ -54,3 +60,33 @@ def test_handler_returns_answer_and_sources(monkeypatch):
     body = json.loads(result["body"])
     assert body["answer"] == "Test answer."
     assert body["sources"][0]["metadata"]["pmid"] == "123"
+
+
+def test_handler_falls_back_to_retrieve_when_no_citations(monkeypatch):
+    response = {
+        "output": {"text": "Test answer."},
+        "citations": [],
+    }
+    retrieval_response = {
+        "retrievalResults": [
+            {
+                "content": {"text": "Doc text."},
+                "metadata": {"pmid": "456"},
+            }
+        ]
+    }
+
+    client = DummyClient(response, retrieval_response)
+    monkeypatch.setattr(query_handler, "client", client)
+    monkeypatch.setattr(query_handler, "KB_ID", "kb-123")
+
+    event = {
+        "body": json.dumps({"question": "What is dementia?"}),
+        "isBase64Encoded": False,
+    }
+
+    result = query_handler.handler(event, SimpleNamespace())
+    assert result["statusCode"] == 200
+    body = json.loads(result["body"])
+    assert body["answer"] == "Test answer."
+    assert body["sources"][0]["metadata"]["pmid"] == "456"
