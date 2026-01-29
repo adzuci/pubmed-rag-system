@@ -21,6 +21,7 @@ st.markdown(
   :root { color-scheme: dark; }
   .main { background-color: #0b0f14; }
   .block-container { padding-top: 2rem; max-width: 1100px; }
+  .mamoru-logo { display: flex; align-items: center; justify-content: center; margin: 0.25rem 0 0.75rem; }
   .mamoru-hero { border: 1px solid #1c2430; background: #111827; padding: 1.5rem; border-radius: 16px; }
   .mamoru-pill { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 999px; background: #1e293b; color: #93c5fd; font-size: 0.8rem; }
   .mamoru-card { border: 1px solid #1f2937; background: #0f172a; padding: 1.25rem; border-radius: 16px; }
@@ -32,13 +33,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.image(LOGO_URL, width=72)
+logo_col_left, logo_col_mid, logo_col_right = st.columns([1, 2, 1])
+with logo_col_mid:
+    st.markdown('<div class="mamoru-logo">', unsafe_allow_html=True)
+    st.image(LOGO_URL, width=92)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown(
     """
 <div class="mamoru-hero">
-  <span class="mamoru-pill">Mamoru Project</span>
-  <h1>Mamoru</h1>
+  <h1>Mamoru Project</h1>
   <p class="mamoru-muted">Safeguarding clinical knowledge for dementia care through grounded answers and trusted sources.</p>
 </div>
 """,
