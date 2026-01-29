@@ -19,8 +19,7 @@ Mamoru Project exists to safeguard knowledge on behalf of those who can’t alwa
 
 ## How To Use The Product
 1. Go to https://mamoruproject.org/
-2. Paste the API base URL (example: `https://pye2ftvvg5.execute-api.us-east-1.amazonaws.com`).
-3. Ask your questions and review the response + sources.
+2. Ask your questions and review the response + sources.
 
 ![Streamlit UI Screenshot](assets/ui-screenshot.png)
 
@@ -86,6 +85,20 @@ See `Makefile` for all available targets: `precommit-install`, `precommit-run`, 
 
 If you want to propose changes, open a pull request so it can be reviewed rather than pushing directly to main.
 
+## GitHub Actions
+Workflows live in `.github/workflows/`:
+- **Tag release**: On merge to `main`, create a tag `v<VERSION>` when the `VERSION` file changes.
+- **Tests + Black**: On PRs, run `black --check .` and `pytest -q`.
+- **ECR push**: On merge to `main`, build/push `pubmed-rag-ui-repo:v<VERSION>` when `VERSION` changes.
+
+**Repo Variables** (non-secret):
+- `AWS_REGION` (e.g. `us-east-1`)
+- `AWS_ACCOUNT_ID` (e.g. `934888692597`)
+
+**Repo Secrets**:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
 ## ADRs
 Create ADRs in `docs/adr/` to capture key decisions (e.g., chunk size, embedding model, vector DB choice).
 
@@ -109,20 +122,13 @@ Or run manually:
    pip install -r ui/requirements.txt
    ```
 
-3. **Configure API endpoint** (optional):
-   - Set `RAG_API_URL` in your `.env` file or export it:
-     ```bash
-     export RAG_API_URL=https://pye2ftvvg5.execute-api.us-east-1.amazonaws.com
-     ```
-   - Or leave it unset and paste the API URL in the sidebar when the app starts.
-
-4. **Run the Streamlit app**:
+3. **Run the Streamlit app**:
    ```bash
    streamlit run ui/app.py
    ```
    The app will open in your browser at `http://localhost:8501`.
 
-**Note**: The app requires a valid RAG API endpoint to function. Deploy the Lambda + API Gateway via Terraform first, or use an existing endpoint.
+**Note**: The app defaults to the deployed API endpoint. Set `RAG_API_URL` in your `.env` to override.
 
 ### Local Data Ingestion
 You can run ingestion locally in a Jupyter notebook for quick iteration:

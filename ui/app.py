@@ -57,7 +57,7 @@ st.markdown(
   .main { background-color: var(--bg-primary); }
   .block-container { 
     padding-top: 0.5rem; 
-    padding-bottom: 120px; 
+    padding-bottom: 150px; 
     max-width: 900px; 
     margin: 0 auto; 
     background-color: var(--bg-primary);
@@ -94,42 +94,49 @@ st.markdown(
     line-height: 1.6;
   }
   
-  /* Chat container */
+  /* Chat container - scrollable above fixed input */
   .chat-container { 
     min-height: auto; 
-    padding-bottom: 2rem; 
+    padding-bottom: 120px; 
     background-color: var(--bg-primary);
-    max-height: calc(100vh - 300px);
+    max-height: calc(100vh - 200px);
     overflow-y: auto;
+    margin-bottom: 0;
   }
   
-  /* Status message area (above input, ChatGPT-like) */
+  /* Status message area (above input, ChatGPT-like) - doesn't shift input */
   .status-message-container {
-    position: fixed;
-    bottom: 80px;
-    left: 0;
-    right: 0;
+    position: fixed !important;
+    bottom: 80px !important;
+    left: 0 !important;
+    right: 0 !important;
     max-width: 900px;
     margin: 0 auto;
     padding: 0 1rem;
-    z-index: 99;
+    z-index: 999 !important;
     pointer-events: none;
+    height: auto;
   }
   .status-message-container > div {
     pointer-events: auto;
+    background: transparent;
+  }
+  .status-message-container > div > div {
+    background: transparent !important;
   }
   
-  /* Fixed input at bottom */
+  /* Fixed input at bottom - always visible */
   .input-container { 
-    position: fixed; 
-    bottom: 0; 
-    left: 0; 
-    right: 0; 
-    background: var(--bg-primary); 
+    position: fixed !important; 
+    bottom: 0 !important; 
+    left: 0 !important; 
+    right: 0 !important; 
+    background: var(--bg-primary) !important; 
     border-top: 1px solid var(--border-color); 
     padding: 1rem; 
-    z-index: 100;
+    z-index: 1000 !important;
     box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+    width: 100%;
   }
   .input-wrapper { 
     max-width: 900px; 
@@ -227,6 +234,21 @@ st.markdown(
   }
   [data-testid="stChatMessage"] p {
     color: var(--text-primary);
+  }
+  
+  /* User avatar padding (red human emoji) - target the avatar container */
+  [data-testid="stChatMessage"] {
+    padding-left: 1rem !important;
+  }
+  /* User message avatar - add padding inside the avatar square */
+  [data-testid="stChatMessage"] [data-testid="stChatAvatar"] {
+    padding: 1rem !important;
+    margin-left: 0.5rem !important;
+    margin-right: 0.75rem !important;
+  }
+  /* Ensure user message container has left padding */
+  [data-testid="stChatMessage"] > div:first-child {
+    padding-left: 0.5rem !important;
   }
   
   /* Sidebar */
@@ -356,44 +378,38 @@ st.markdown(
 </style>
 <script>
   // Make Enter key trigger submit (ChatGPT-like behavior)
-  function setupEnterKey() {
-    const inputs = document.querySelectorAll('input[data-testid="stTextInput"]');
-    inputs.forEach(input => {
-      // Use a one-time flag to prevent duplicate listeners
-      if (input.dataset.enterHandlerAttached === 'true') {
-        return;
-      }
-      input.dataset.enterHandlerAttached = 'true';
-      
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          // Find the Ask button - try multiple selectors
-          let askButton = document.querySelector('button[kind="primaryFormSubmit"]');
-          if (!askButton) {
-            // Fallback: find button with "Ask" text near the input
-            const inputContainer = input.closest('.input-wrapper') || input.closest('.input-container');
-            if (inputContainer) {
-              const buttons = Array.from(inputContainer.querySelectorAll('button'));
-              askButton = buttons.find(btn => btn.textContent.trim() === 'Ask');
-            }
-          }
-          if (askButton) {
-            askButton.click();
+  document.addEventListener('keydown', function(e) {
+    // Only handle Enter key on text inputs
+    if (e.target.tagName === 'INPUT' && e.target.getAttribute('data-testid') === 'stTextInput') {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // Find the Ask button - try multiple selectors
+        let askButton = document.querySelector('button[data-testid*="ask_button"]');
+        if (!askButton) {
+          // Try by key attribute directly
+          askButton = document.querySelector('button[key*="ask_button"]');
+        }
+        if (!askButton) {
+          askButton = document.querySelector('button[kind="primaryFormSubmit"]');
+        }
+        if (!askButton) {
+          // Fallback: find button with "Ask" text near the input
+          const inputContainer = e.target.closest('.input-wrapper') || e.target.closest('.input-container');
+          if (inputContainer) {
+            const buttons = Array.from(inputContainer.querySelectorAll('button'));
+            askButton = buttons.find(btn => btn.textContent && btn.textContent.trim() === 'Ask');
           }
         }
-      });
-    });
-  }
-  // Run on load and after Streamlit reruns
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupEnterKey);
-  } else {
-    setupEnterKey();
-  }
-  // Also setup after Streamlit reruns
-  const observer = new MutationObserver(setupEnterKey);
-  observer.observe(document.body, { childList: true, subtree: true });
+        if (askButton && !askButton.disabled) {
+          setTimeout(() => askButton.click(), 10);
+          return false;
+        }
+      }
+    }
+  }, true);
   
   // Auto-scroll to bottom when new messages appear
   function autoScroll() {
@@ -423,13 +439,38 @@ st.markdown(
   }
   
   // Also scroll after Streamlit reruns (when new content is added)
-  const scrollObserver = new MutationObserver(() => {
-    setTimeout(autoScroll, 300);
+  const scrollObserver = new MutationObserver((mutations) => {
+    // Check if new chat messages were added
+    let shouldScroll = false;
+    mutations.forEach(mutation => {
+      if (mutation.addedNodes.length > 0) {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === 1 && (
+            node.querySelector && (
+              node.querySelector('[data-testid="stChatMessage"]') ||
+              node.matches && node.matches('[data-testid="stChatMessage"]')
+            )
+          )) {
+            shouldScroll = true;
+          }
+        });
+      }
+    });
+    if (shouldScroll) {
+      setTimeout(autoScroll, 500);
+    }
   });
   scrollObserver.observe(document.body, { childList: true, subtree: true });
   
   // Also listen for Streamlit's custom events
   window.addEventListener('load', () => setTimeout(autoScroll, 300));
+  
+  // Force scroll after Streamlit reruns complete
+  window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'streamlit:rerun') {
+      setTimeout(autoScroll, 600);
+    }
+  });
 </script>
 """,
     unsafe_allow_html=True,
@@ -636,6 +677,10 @@ st.markdown('<div class="input-wrapper">', unsafe_allow_html=True)
 
 # Get pending question from sample button click, or use empty string
 initial_value = st.session_state.get("pending_question", "")
+# Clear input after answer is submitted
+if st.session_state.get("clear_input", False):
+    initial_value = ""
+    st.session_state["clear_input"] = False
 if initial_value:
     # Clear pending question after using it
     del st.session_state["pending_question"]
@@ -674,10 +719,10 @@ if ask or auto_submit:
 
     logger.info("rag_query: %s", question.strip())
 
-    # Show retrieving message above input (ChatGPT-like)
+    # Show retrieving message above input (ChatGPT-like) - positioned fixed, doesn't shift input
     with status_container.container():
         st.markdown(
-            '<div style="text-align: center; color: var(--text-muted); padding: 0.75rem 1rem; font-size: 0.9em;">'
+            '<div style="text-align: center; color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.9em; background: transparent;">'
             "🔄 Retrieving sources and drafting answer..."
             "</div>",
             unsafe_allow_html=True,
@@ -721,6 +766,12 @@ if ask or auto_submit:
             "sources": sources_list,
         }
     )
-    # Clear auto_submit and rerun to show new answer (input will be empty on rerun)
+    # Clear auto_submit and mark input for clearing
     st.session_state["auto_submit"] = False
+    st.session_state["clear_input"] = True
+    # Trigger scroll after rerun completes
+    st.markdown(
+        '<script>setTimeout(() => { window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); const chatContainer = document.querySelector(".chat-container"); if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight; }, 800);</script>',
+        unsafe_allow_html=True,
+    )
     st.rerun()
