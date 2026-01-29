@@ -38,19 +38,34 @@ def _json_response(status_code, payload):
     }
 
 
+def _parse_body(event):
+    """Parse JSON body from a REST or HTTP API event. Returns dict or None."""
+    if not event.get("body"):
+        return {}
+    body = event["body"]
+    if event.get("isBase64Encoded"):
+        body = base64.b64decode(body).decode("utf-8")
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return None
+
+
 def _extract_question(event):
     """Extract the `question` string from a REST or HTTP API event."""
-    if event.get("body"):
-        body = event["body"]
-        if event.get("isBase64Encoded"):
-            body = base64.b64decode(body).decode("utf-8")
-        try:
-            data = json.loads(body)
-        except json.JSONDecodeError:
-            return None
+    data = _parse_body(event)
+    if data is not None and data.get("question") is not None:
         return data.get("question")
     params = event.get("queryStringParameters") or {}
     return params.get("question")
+
+
+def _extract_client_ip(event):
+    """Extract optional `client_ip` from request body (set by Streamlit UI)."""
+    data = _parse_body(event)
+    if data is None:
+        return None
+    return data.get("client_ip")
 
 
 def handler(event, context):
@@ -64,7 +79,8 @@ def handler(event, context):
     if not question:
         return _json_response(400, {"error": "Missing question"})
 
-    LOGGER.info("rag_query: %s", question)
+    client_ip = _extract_client_ip(event) or "-"
+    LOGGER.info("rag_query: %s %s", client_ip, question)
 
     try:
         resp = client.retrieve_and_generate(

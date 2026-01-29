@@ -9,9 +9,18 @@ REPO_NAME ?= pubmed-rag-ui-repo
 VERSION ?= $(shell cat VERSION 2>/dev/null)
 IMAGE_TAG ?= v$(VERSION)
 
-.PHONY: precommit-install precommit-run clean-notebooks test run-ui run-fetch run-process terraform-init terraform-validate terraform-plan terraform-apply build-push-ui bump-patch bump-minor bump-major tag-release
+.PHONY: precommit-install precommit-run clean-notebooks test setup run-ui run-fetch run-process terraform-init terraform-validate terraform-plan terraform-apply build-ui build-push-ui bump-patch bump-minor bump-major tag-release
 
 # Development Tools
+# Require Python 3.12+ and Docker; setup reports clearly if either is missing
+setup:
+	@command -v $(PYTHON) >/dev/null 2>&1 || { echo "Python is required (e.g. 3.12.x). Install from https://www.python.org/"; exit 1; }
+	@$(PYTHON) -c "import sys; exit(0 if sys.version_info >= (3, 12) else 1)" 2>/dev/null || { echo "Python 3.12 or newer is required. Current: $$($(PYTHON) --version 2>/dev/null || echo 'unknown')"; exit 1; }
+	@command -v docker >/dev/null 2>&1 || { echo "Docker is required for building/pushing the UI image. Install from https://www.docker.com/"; exit 1; }
+	@test -d .venv || $(PYTHON) -m venv .venv
+	@. .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt -r ui/requirements.txt
+	@echo "Setup complete. Run: make run-ui"
+
 precommit-install:
 	$(PYTHON) -m pre_commit install
 
@@ -22,11 +31,16 @@ clean-notebooks:
 	$(PYTHON) -m nbstripout $(NOTEBOOK_DIR)/*.ipynb
 
 test:
-	set -a; [ -f .env ] && . .env; set +a; PYTHONPATH=. $(PYTHON) -m pytest -q
+	set -a; [ -f .env ] && . .env; set +a; PYTHONPATH=. $(RUN_PYTHON) -m pytest -q
 
-# Local Development
+# Local Development (prefer .venv if present so "make setup && make run-ui" works)
+RUN_PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,$(PYTHON))
 run-ui:
-	set -a; [ -f .env ] && . .env; set +a; streamlit run ui/app.py
+	@$(RUN_PYTHON) -c "import streamlit" 2>/dev/null || { \
+		echo "Streamlit not found. Run: make setup"; \
+		exit 1; \
+	}
+	set -a; [ -f .env ] && . .env; set +a; $(RUN_PYTHON) -m streamlit run ui/app.py
 
 run-fetch:
 	mkdir -p $(RUN_DIR)
@@ -84,17 +98,21 @@ terraform-apply:
 	cd $(TF_DIR) && terraform apply -auto-approve
 
 # Docker & Deployment
-build-push-ui:
+# build-ui: build image only (no AWS creds required). build-push-ui: build + push to ECR.
+build-ui:
 	@if [ -z "$(VERSION)" ]; then \
 	  echo "VERSION file missing. Create VERSION (e.g. 0.0.4)."; \
 	  exit 1; \
 	fi
+	docker build --build-arg VERSION=$(VERSION) -t "$(REPO_NAME):$(IMAGE_TAG)" ui/
+	@echo "UI image built locally. To push to ECR (requires AWS creds): make build-push-ui"
+
+build-push-ui: build-ui
 	@if [ -z "$(ACCOUNT_ID)" ]; then \
 	  echo "ACCOUNT_ID is not set and could not be derived from aws sts. Set ACCOUNT_ID env var."; \
 	  exit 1; \
 	fi
 	aws ecr get-login-password --region "$(AWS_REGION)" | docker login --username AWS --password-stdin "$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com"
-	docker build --build-arg VERSION=$(VERSION) -t "$(REPO_NAME):$(IMAGE_TAG)" ui/
 	docker tag "$(REPO_NAME):$(IMAGE_TAG)" "$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(REPO_NAME):$(IMAGE_TAG)"
 	docker push "$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(REPO_NAME):$(IMAGE_TAG)"
 	@echo "UI image built and pushed. Run 'make terraform-apply' to update infrastructure."
