@@ -41,7 +41,7 @@ st.markdown(
   .main { background-color: var(--bg-primary); }
   .block-container { 
     padding-top: 0.5rem; 
-    padding-bottom: 120px; 
+    padding-bottom: 150px; 
     max-width: 900px; 
     margin: 0 auto; 
     background-color: var(--bg-primary);
@@ -80,8 +80,8 @@ st.markdown(
   
   /* Chat container */
   .chat-container { 
-    min-height: calc(100vh - 500px); 
-    padding-bottom: 140px; 
+    min-height: calc(100vh - 400px); 
+    padding-bottom: 150px; 
     background-color: var(--bg-primary);
   }
   
@@ -102,7 +102,15 @@ st.markdown(
     margin: 0 auto; 
   }
   .input-wrapper [data-testid="column"] {
-    padding: 0;
+    padding: 0 0.25rem;
+  }
+  .input-wrapper [data-testid="column"]:first-child {
+    flex: 1;
+  }
+  .input-wrapper [data-testid="column"]:last-child {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
   }
   
   /* Buttons */
@@ -110,10 +118,12 @@ st.markdown(
     background: var(--button-primary); 
     color: var(--button-text); 
     border-radius: 8px; 
-    padding: 0.6rem 1.5rem; 
+    padding: 0.6rem 1.2rem; 
     font-weight: 500;
-    height: 44px;
+    height: 38px;
     border: none;
+    white-space: nowrap;
+    margin-top: 0;
   }
   .stButton>button:hover { 
     background: var(--button-primary-hover); 
@@ -128,6 +138,8 @@ st.markdown(
     font-size: 1em;
     background-color: var(--bg-secondary);
     color: var(--text-primary);
+    height: 38px;
+    box-sizing: border-box;
   }
   .stTextInput>div>div>input:focus { 
     border-color: var(--border-focus);
@@ -421,7 +433,7 @@ if initial_value:
     # Clear pending question after using it
     del st.session_state["pending_question"]
 
-col_input, col_button = st.columns([10, 1], gap="small")
+col_input, col_button = st.columns([1, 0.15], gap="small")
 
 with col_input:
     question = st.text_input(

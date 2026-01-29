@@ -1,7 +1,16 @@
 import json
+import os
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
-from api import lambda_query_handler as query_handler
+# Set AWS region before importing to avoid NoRegionError
+os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
+os.environ.setdefault("AWS_REGION", "us-east-1")
+
+# Mock boto3.client before importing the handler module to prevent NoRegionError
+mock_boto3_client = MagicMock()
+with patch("boto3.client", return_value=mock_boto3_client):
+    from api import lambda_query_handler as query_handler
 
 
 class DummyClient:
