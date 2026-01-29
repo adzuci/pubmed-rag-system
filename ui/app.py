@@ -699,7 +699,12 @@ if ask or auto_submit:
         st.error("Enter a question.")
         st.stop()
 
-    logger.info("rag_query: %s", question.strip())
+    # Log with client IP when available (Streamlit 1.35+ st.context.ip_address)
+    ip = getattr(getattr(st, "context", None), "ip_address", None) or "-"
+    logger.info("rag_query: %s %s", ip, question.strip())
+
+    # Pass client IP through to query Lambda for logging / rate-limiting
+    request_payload = {"question": question.strip(), "client_ip": ip}
 
     # Show retrieving message above input (ChatGPT-like) - positioned fixed, doesn't shift input
     with status_container.container():
@@ -713,7 +718,7 @@ if ask or auto_submit:
     try:
         resp = requests.post(
             f"{api_url}/query",
-            json={"question": question.strip()},
+            json=request_payload,
             timeout=30,
         )
     except requests.RequestException as exc:

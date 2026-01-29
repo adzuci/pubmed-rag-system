@@ -266,9 +266,19 @@ If you encounter a 403 Forbidden error when creating the OpenSearch index, the a
 ## Operations
 
 ### Query Logs
-The Streamlit UI logs each question to stdout. When deployed, these logs are available in CloudWatch Logs under the ECS log group created by the module:
+The Streamlit UI logs each question (and client IP when available) to stdout. When deployed, these logs are available in CloudWatch Logs under the ECS log group created by the module:
 - Log group: `/ecs/<app_name>-ecs-log-group`
-- Filter example: `fields @timestamp, @message | filter @message like /rag_query:/ | sort @timestamp desc`
+- Filter example (CloudWatch Logs Insights): `fields @timestamp, @message | filter @message like /rag_query:/ | sort @timestamp desc`
+- CLI with timestamps and IPs (jq; last 7 days):
+  ```bash
+  aws logs filter-log-events \
+    --log-group-name "/ecs/pubmed-rag-ui-ecs-log-group" \
+    --filter-pattern "rag_query" \
+    --start-time $(($(date +%s) - 604800))000 \
+    --output json |
+  jq -r '.events[] | "\(.timestamp / 1000 | strftime("%Y-%m-%d %H:%M:%S"))\t\(.logStreamName)\t\(.message)"'
+  ```
+  Output is tab-separated: timestamp (UTC), log stream name, message (includes client IP and question when the app logs it).
 
 ### Cleanup
 - `terraform destroy` to remove AWS resources created by this repo.
@@ -290,6 +300,7 @@ weekly ingest run, 100–1,000 Q&A requests per month, and a single Streamlit ta
 
 ## Future Roadmap
 Once the product is considered viable, possible next steps include:
+1. Modifying query handler to respond gracefully when unreasonable or non-caregiver related prompts are given.
 1. Adding auth, encoding the API endpoint and setting per-user rate limits.
 1. Migrating away from Streamlit to a static React frontend behind a WAF, and reviewing CIS benchmarks / hardening the production environment.
 1. Creating a dedicated stage environment and wiring up CI/CD to promote changes from stage to prod.
