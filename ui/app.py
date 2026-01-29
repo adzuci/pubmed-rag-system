@@ -21,6 +21,21 @@ st.set_page_config(
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
+# Google Analytics tracking
+st.markdown(
+    """
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3TZ2EQTPMP"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-3TZ2EQTPMP');
+</script>
+""",
+    unsafe_allow_html=True,
+)
+
 st.markdown(
     """
 <style>
