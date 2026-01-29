@@ -213,7 +213,7 @@ The Makefile provides convenient targets for Terraform operations:
    To only build the image locally (no AWS creds), use `make build-ui`.
    **Important**: Always bump the version (`make bump-patch`, `make bump-minor`, or `make bump-major`) before deploying a new image. This ensures ECS pulls the new image instead of using a cached version. The version is automatically passed to Docker as a build argument and written to the container.
    
-   After building the image, run `make terraform-plan && terraform-apply` to update the infrastructure with the new image version.
+   After building the image, run `make terraform-plan && make terraform-apply` to update the infrastructure with the new image version.
 
    **Note**: When updating `ui/app.py`, ensure `streamlit_app_version` in `terraform/variables.tf` is aligned with `VERSION` before applying. The `build-push-ui` target uses `VERSION` automatically, and `bump2version` updates both files.
 
