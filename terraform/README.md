@@ -43,7 +43,7 @@ terraform {
 - `bedrock_model_arn` (default: Claude 3.5 Sonnet)
 - `rag_api_name` (default: `pubmed-rag-api`)
 - `streamlit_app_name` (default: `pubmed-rag-ui`)
-- `streamlit_app_version` (default: `v0.0.2`)
+- `streamlit_app_version` (default: `vX.Y.Z` via `VERSION` + `bump2version`)
 - `opensearch_admin_principals` (list of IAM principals for OpenSearch access)
 - `streamlit_domain_name` (default: `mamoru.org`)
 - `streamlit_hosted_zone_id` (optional, use an existing Route53 zone)

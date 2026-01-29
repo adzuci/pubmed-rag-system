@@ -136,7 +136,7 @@ expecting ACM validation to complete.
      - `AWS_REGION=us-east-1`
      - `ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)`
      - `REPO_NAME=pubmed-rag-ui-repo`
-     - `IMAGE_TAG=v0.0.2`
+     - `IMAGE_TAG=vX.Y.Z` (use the version from `VERSION`)
      - `aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com`
      - `docker build -t $REPO_NAME:$IMAGE_TAG ui/`
      - `docker tag $REPO_NAME:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG`
