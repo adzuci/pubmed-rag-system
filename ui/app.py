@@ -518,12 +518,27 @@ with st.sidebar:
         help="The base URL for the RAG API endpoint (without /query suffix)",
     )
 
-    # Read version from VERSION file (in repo root)
+    # Read version from VERSION file or environment variable
     try:
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        version_file = os.path.join(repo_root, "VERSION")
-        with open(version_file, "r") as f:
-            image_version = f.read().strip()
+        # Try environment variable first (set by Dockerfile)
+        image_version = os.getenv("APP_VERSION", "")
+        if not image_version:
+            # Try VERSION file in same directory as app.py (container)
+            version_file = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "VERSION"
+            )
+            if os.path.exists(version_file):
+                with open(version_file, "r") as f:
+                    image_version = f.read().strip()
+            else:
+                # Fallback to repo root (for local development)
+                repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                version_file = os.path.join(repo_root, "VERSION")
+                if os.path.exists(version_file):
+                    with open(version_file, "r") as f:
+                        image_version = f.read().strip()
+                else:
+                    image_version = "unknown"
     except Exception:
         image_version = "unknown"
 

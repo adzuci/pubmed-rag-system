@@ -94,7 +94,7 @@ build-push-ui:
 	  exit 1; \
 	fi
 	aws ecr get-login-password --region "$(AWS_REGION)" | docker login --username AWS --password-stdin "$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com"
-	docker build -t "$(REPO_NAME):$(IMAGE_TAG)" ui/
+	docker build --build-arg VERSION=$(VERSION) -t "$(REPO_NAME):$(IMAGE_TAG)" ui/
 	docker tag "$(REPO_NAME):$(IMAGE_TAG)" "$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(REPO_NAME):$(IMAGE_TAG)"
 	docker push "$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(REPO_NAME):$(IMAGE_TAG)"
 	@echo "UI image built and pushed. Run 'make terraform-apply' to update infrastructure."
