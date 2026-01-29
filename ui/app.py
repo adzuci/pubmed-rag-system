@@ -359,38 +359,32 @@ st.markdown(
   }
 </style>
 <script>
-  // Make Enter key trigger submit (ChatGPT-like behavior)
+  // Make Enter key trigger submit (ChatGPT-like). Target only the question input:
+  // Streamlit puts data-testid on the widget container, not on the <input>, so match by .input-wrapper.
   document.addEventListener('keydown', function(e) {
-    // Only handle Enter key on text inputs
-    if (e.target.tagName === 'INPUT' && e.target.getAttribute('data-testid') === 'stTextInput') {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        
-        // Find the Ask button - try multiple selectors
-        let askButton = document.querySelector('button[data-testid*="ask_button"]');
-        if (!askButton) {
-          // Try by key attribute directly
-          askButton = document.querySelector('button[key*="ask_button"]');
-        }
-        if (!askButton) {
-          askButton = document.querySelector('button[kind="primaryFormSubmit"]');
-        }
-        if (!askButton) {
-          // Fallback: find button with "Ask" text near the input
-          const inputContainer = e.target.closest('.input-wrapper') || e.target.closest('.input-container');
-          if (inputContainer) {
-            const buttons = Array.from(inputContainer.querySelectorAll('button'));
-            askButton = buttons.find(btn => btn.textContent && btn.textContent.trim() === 'Ask');
-          }
-        }
-        if (askButton && !askButton.disabled) {
-          setTimeout(() => askButton.click(), 10);
-          return false;
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    if (e.target.tagName !== 'INPUT') return;
+    var inQuestionInput = e.target.closest && e.target.closest('.input-wrapper');
+    if (!inQuestionInput) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    var askButton = document.querySelector('button[data-testid*="ask_button"]') ||
+      document.querySelector('button[key*="ask_button"]') ||
+      document.querySelector('button[kind="primaryFormSubmit"]');
+    if (!askButton && inQuestionInput) {
+      var buttons = inQuestionInput.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].textContent && buttons[i].textContent.trim() === 'Ask') {
+          askButton = buttons[i];
+          break;
         }
       }
     }
+    if (askButton && !askButton.disabled) {
+      setTimeout(function() { askButton.click(); }, 10);
+    }
+    return false;
   }, true);
   
   // Auto-scroll to bottom when new messages appear
