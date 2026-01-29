@@ -64,7 +64,7 @@ variable "streamlit_app_name" {
 variable "streamlit_app_version" {
   description = "Version tag for the Streamlit app container."
   type        = string
-  default     = "v0.0.7"
+  default     = "v0.0.8"
 }
 
 variable "opensearch_admin_principals" {
