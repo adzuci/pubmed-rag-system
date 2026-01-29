@@ -35,3 +35,20 @@ resource "aws_acm_certificate_validation" "streamlit" {
   certificate_arn         = aws_acm_certificate.streamlit.arn
   validation_record_fqdns = [for record in aws_route53_record.streamlit_cert_validation : record.fqdn]
 }
+
+# Email reputation: SPF (no mail servers) and DMARC (policy + reporting)
+resource "aws_route53_record" "spf" {
+  zone_id = local.streamlit_zone_id
+  name    = var.streamlit_domain_name
+  type    = "TXT"
+  ttl     = 300
+  records = ["v=spf1 -all"]
+}
+
+resource "aws_route53_record" "dmarc" {
+  zone_id = local.streamlit_zone_id
+  name    = "_dmarc.${var.streamlit_domain_name}"
+  type    = "TXT"
+  ttl     = 300
+  records = ["v=DMARC1; p=none; rua=mailto:${var.alert_email}; fo=1"]
+}
