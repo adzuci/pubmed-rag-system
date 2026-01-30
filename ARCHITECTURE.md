@@ -35,7 +35,7 @@ flowchart TB
     %% Lambda inner box
     subgraph LAMBDAS["Lambda functions"]
       direction TB
-      RH[Lambda: rag_handler]
+      RH[Lambda: rag_query]
     end
 
     APIGW -->|Invoke| RH

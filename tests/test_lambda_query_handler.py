@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 from types import SimpleNamespace
@@ -90,3 +91,37 @@ def test_handler_falls_back_to_retrieve_when_no_citations(monkeypatch):
     body = json.loads(result["body"])
     assert body["answer"] == "Test answer."
     assert body["sources"][0]["metadata"]["pmid"] == "456"
+
+
+def test_handler_returns_500_when_kb_missing(monkeypatch):
+    monkeypatch.setattr(query_handler, "KB_ID", "")
+    event = {
+        "body": json.dumps({"question": "What is dementia?"}),
+        "isBase64Encoded": False,
+    }
+    result = query_handler.handler(event, SimpleNamespace())
+    assert result["statusCode"] == 500
+
+
+def test_handler_returns_400_on_invalid_json(monkeypatch):
+    monkeypatch.setattr(query_handler, "KB_ID", "kb-123")
+    event = {"body": "{", "isBase64Encoded": False}
+    result = query_handler.handler(event, SimpleNamespace())
+    assert result["statusCode"] == 400
+
+
+def test_handler_accepts_base64_body(monkeypatch):
+    response = {
+        "output": {"text": "Test answer."},
+        "citations": [],
+    }
+    client = DummyClient(response, retrieval_response={"retrievalResults": []})
+    monkeypatch.setattr(query_handler, "client", client)
+    monkeypatch.setattr(query_handler, "KB_ID", "kb-123")
+
+    payload = json.dumps({"question": "What is dementia?", "client_ip": "1.2.3.4"})
+    encoded = base64.b64encode(payload.encode("utf-8")).decode("utf-8")
+    event = {"body": encoded, "isBase64Encoded": True}
+
+    result = query_handler.handler(event, SimpleNamespace())
+    assert result["statusCode"] == 200

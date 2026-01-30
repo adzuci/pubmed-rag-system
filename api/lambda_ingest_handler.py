@@ -24,6 +24,7 @@ LOGGER = logging.getLogger("pubmed-ingest")
 LOGGER.setLevel(logging.INFO)
 
 
+# --- Secrets ---
 def _get_secret_value(secret_arn):
     """Load the secret from Secrets Manager and return it as a dict (JSON string or binary)."""
     client = boto3.client("secretsmanager")
@@ -33,6 +34,7 @@ def _get_secret_value(secret_arn):
     return json.loads(resp["SecretBinary"].decode("utf-8"))
 
 
+# --- Record formatting ---
 def _format_record(rec):
     """Turn one parsed MEDLINE record into the same .txt-style block we use in the notebook."""
     parts = []
@@ -55,6 +57,7 @@ def handler(event, context):
     """Run the full ingest: search, fetch in batches, write .txt files to S3."""
     del event  # unused
 
+    # --- Config and validation ---
     secret_arn = os.getenv("NCBI_SECRET_ARN", "")
     bucket = os.getenv("S3_BUCKET", "")
     raw_prefix = os.getenv("RAW_PREFIX", "raw/").rstrip("/") + "/"
@@ -83,9 +86,11 @@ def handler(event, context):
     if api_key:
         Entrez.api_key = api_key
 
+    # NCBI allows more requests/sec with an API key; use shorter delay when key is set.
     request_delay = 0.10 if api_key else 0.34
     s3 = boto3.client("s3")
 
+    # --- PubMed search (ESearch) ---
     try:
         stream = Entrez.esearch(db="pubmed", term=query, retmax=retmax, usehistory="y")
         record = Entrez.read(stream)
@@ -102,8 +107,10 @@ def handler(event, context):
     if not (webenv and query_key):
         raise RuntimeError("Missing WebEnv or QueryKey from PubMed search.")
 
+    # --- Fetch in batches and write to S3 (EFetch) ---
     written = 0
     for start in range(0, target_count, batch_size):
+        # Leave enough time for this batch and a clean shutdown.
         if context and context.get_remaining_time_in_millis() < 15000:
             LOGGER.warning("Stopping early to avoid Lambda timeout.")
             break
@@ -134,6 +141,7 @@ def handler(event, context):
         if start + batch_size < target_count:
             time.sleep(request_delay)
 
+    # --- Response ---
     LOGGER.info("pubmed_ingest_complete: %s records", written)
     return {
         "statusCode": 200,

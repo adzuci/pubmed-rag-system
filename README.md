@@ -34,7 +34,7 @@ As people age or experience cognitive decline, knowledge doesn’t disappear; it
 ![Streamlit UI Screenshot](assets/ui-screenshot.png)
 
 ## Architecture Overview
-**[→ Full architecture with three diagrams (Cloud Deployment, Data Ingestion, Bedrock zoom-in)](ARCHITECTURE.md)**
+**[→ Full architecture with three diagrams](ARCHITECTURE.md)**
 
 For those interested in how Mamoru was built, at a high level it’s end-to-end RAG over PubMed: we pull literature via NCBI E-utilities, chunk and embed text, store vectors in a Bedrock Knowledge Base, and expose a single-turn Q&A API plus a minimal Streamlit UI so answers are grounded in retrieved snippets and citeable. Under the hood, Bedrock was chosen for both embeddings and generation so inference and vector search stay in one place and we avoid moving large payloads.
 
@@ -86,6 +86,9 @@ This repo includes a `Makefile` with common development tasks. For running the a
 
 - Set up pre-commit hooks: `make precommit-install`
 - Run tests: `make test`
+- Dev/test dependencies live in `requirements-dev.txt` (installed by `make setup`).
+- Notebooks are formatted with `nbqa black notebooks/` (pre-commit runs this on `.ipynb` files).
+- Currently, motebook outputs are committed so readers can see results without running. Do not add cells that print secrets (API keys, tokens, full env). Use `make clean-notebooks` to strip outputs before commit if needed.
 
 See `Makefile` for all available targets: `setup`, `precommit-install`, `precommit-run`, `clean-notebooks`, `test`, `run-ui`, `run-fetch`, `run-process`, `terraform-init`, `terraform-validate`, `terraform-plan`, `terraform-apply`, `build-ui`, `build-push-ui`, `bump-patch`, `bump-minor`, `bump-major`, `tag-release`.
 
