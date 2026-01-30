@@ -1,20 +1,17 @@
-"""Lambda handler for RAG query requests.
+"""RAG query Lambda: answers questions using the Bedrock knowledge base.
 
-This function is fronted by API Gateway and calls Bedrock
-`retrieve_and_generate` against a configured knowledge base.
-
-Environment variables:
-    BEDROCK_KB_ID: Knowledge base identifier (required).
-    BEDROCK_MODEL_ARN: Model ARN to use for generation (optional, has default).
+API Gateway sends the request here; we call Bedrock retrieve_and_generate so the
+model can search our PubMed-derived index and answer from those sources. Needs
+BEDROCK_KB_ID; BEDROCK_MODEL_ARN is optional and has a default.
 """
 
 import base64
 import json
 import logging
 import os
-
 import boto3
 
+# --- Config ---
 LOGGER = logging.getLogger("rag-query")
 LOGGER.setLevel(logging.INFO)
 
@@ -27,6 +24,7 @@ MODEL_ARN = os.getenv(
 client = boto3.client("bedrock-agent-runtime")
 
 
+# --- Response helpers ---
 def _json_response(status_code, payload):
     """Return an API Gateway compatible JSON response."""
     return {
@@ -38,8 +36,9 @@ def _json_response(status_code, payload):
     }
 
 
+# --- Request parsing ---
 def _parse_body(event):
-    """Parse JSON body from a REST or HTTP API event. Returns dict or None."""
+    """Get the request body as a dict; handles base64 if the event says so."""
     if not event.get("body"):
         return {}
     body = event["body"]
@@ -61,7 +60,7 @@ def _extract_question(event):
 
 
 def _extract_client_ip(event):
-    """Extract optional `client_ip` from request body (set by Streamlit UI)."""
+    """Optional client_ip from the body (the Streamlit UI sends it for logging)."""
     data = _parse_body(event)
     if data is None:
         return None
@@ -69,9 +68,10 @@ def _extract_client_ip(event):
 
 
 def handler(event, context):
-    """Entry point for the query Lambda."""
+    """Handle a single RAG query: validate, call Bedrock, return answer and sources."""
     del context  # unused
 
+    # --- Validation ---
     if not KB_ID:
         return _json_response(500, {"error": "BEDROCK_KB_ID is not configured"})
 
@@ -82,6 +82,7 @@ def handler(event, context):
     client_ip = _extract_client_ip(event) or "-"
     LOGGER.info("rag_query: %s %s", client_ip, question)
 
+    # --- Bedrock retrieve_and_generate ---
     try:
         resp = client.retrieve_and_generate(
             input={"text": question},
@@ -124,6 +125,7 @@ Provide a direct answer without mentioning sources:"""
         LOGGER.exception("rag_query_failed")
         return _json_response(500, {"error": str(exc)})
 
+    # --- Response shaping ---
     answer = resp.get("output", {}).get("text", "")
     sources = []
     for citation in resp.get("citations", []):
@@ -135,6 +137,8 @@ Provide a direct answer without mentioning sources:"""
                 }
             )
 
+    # Bedrock sometimes returns a good answer but empty citations; fall back to
+    # retrieve() so the UI still has sources to display.
     if not sources:
         try:
             retrieval = client.retrieve(
@@ -154,6 +158,7 @@ Provide a direct answer without mentioning sources:"""
         except Exception:
             LOGGER.exception("rag_query_retrieve_failed")
 
+    # --- Return ---
     return _json_response(
         200,
         {

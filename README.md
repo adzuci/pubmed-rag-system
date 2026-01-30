@@ -2,12 +2,12 @@
 
 # Mamoru Project: A PubMed RAG Based System
 
-This project builds an AWS-hosted retrieval-augmented generation system using papers from PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature. It was created as part of an interview process and then expanded. See [Architecture Overview](#architecture-overview) to learn more, and our [mock pitch deck](https://docs.google.com/presentation/d/1pU9SLoW5Ash5Qy7y0O62F0xYvQ3ghYX6LY4keAH-xtI/edit?usp=sharing) for where things may go next.
+This project builds an AWS-hosted retrieval-augmented generation system using papers from PubMed to answer caregiver and clinician-oriented questions about dementia progression and care using peer-reviewed clinical literature. It was created as part of an interview process and then expanded. See [Architecture Overview](#architecture-overview) and the [Architecture diagrams](ARCHITECTURE.md) (Cloud Deployment, Data Ingestion, Bedrock zoom-in) to learn more, and our [mock pitch deck](https://docs.google.com/presentation/d/1pU9SLoW5Ash5Qy7y0O62F0xYvQ3ghYX6LY4keAH-xtI/edit?usp=sharing) for where things may go next.
 
 ## Contents
 - [The Story of Mamoru Project](#the-story-of-mamoru-project)
 - [How To Use The Product](#how-to-use-the-product)
-- [Architecture Overview](#architecture-overview)
+- [Architecture Overview](#architecture-overview) → [ARCHITECTURE.md](ARCHITECTURE.md) (diagrams)
 - [Repository Layout](#repository-layout)
 - [Development Approach](#development-approach)
 - [ADRs](#adrs)
@@ -34,6 +34,8 @@ As people age or experience cognitive decline, knowledge doesn’t disappear; it
 ![Streamlit UI Screenshot](assets/ui-screenshot.png)
 
 ## Architecture Overview
+**[→ Full architecture with three diagrams](ARCHITECTURE.md)**
+
 For those interested in how Mamoru was built, at a high level it’s end-to-end RAG over PubMed: we pull literature via NCBI E-utilities, chunk and embed text, store vectors in a Bedrock Knowledge Base, and expose a single-turn Q&A API plus a minimal Streamlit UI so answers are grounded in retrieved snippets and citeable. Under the hood, Bedrock was chosen for both embeddings and generation so inference and vector search stay in one place and we avoid moving large payloads.
 
 The design is intended to leverage AWS services where possible so operators can deploy and manage instances of the product in AWS with minimal effort. Ideally this template can be expanded for other use cases beyond dementia care (e.g. other PubMed-backed domains or different data sources).
@@ -84,6 +86,9 @@ This repo includes a `Makefile` with common development tasks. For running the a
 
 - Set up pre-commit hooks: `make precommit-install`
 - Run tests: `make test`
+- Dev/test dependencies live in `requirements-dev.txt` (installed by `make setup`).
+- Notebooks are formatted with `nbqa black notebooks/` (pre-commit runs this on `.ipynb` files).
+- Currently, motebook outputs are committed so readers can see results without running. Do not add cells that print secrets (API keys, tokens, full env). Use `make clean-notebooks` to strip outputs before commit if needed.
 
 See `Makefile` for all available targets: `setup`, `precommit-install`, `precommit-run`, `clean-notebooks`, `test`, `run-ui`, `run-fetch`, `run-process`, `terraform-init`, `terraform-validate`, `terraform-plan`, `terraform-apply`, `build-ui`, `build-push-ui`, `bump-patch`, `bump-minor`, `bump-major`, `tag-release`.
 

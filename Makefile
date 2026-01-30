@@ -9,7 +9,7 @@ REPO_NAME ?= pubmed-rag-ui-repo
 VERSION ?= $(shell cat VERSION 2>/dev/null)
 IMAGE_TAG ?= v$(VERSION)
 
-.PHONY: precommit-install precommit-run clean-notebooks test setup run-ui run-fetch run-process terraform-init terraform-validate terraform-plan terraform-apply build-ui build-push-ui bump-patch bump-minor bump-major tag-release
+.PHONY: precommit-install precommit-run clean-notebooks test coverage setup run-ui run-fetch run-process terraform-init terraform-validate terraform-plan terraform-apply build-ui build-push-ui bump-patch bump-minor bump-major tag-release
 
 # Development Tools
 # Require Python 3.12+ and Docker; setup reports clearly if either is missing
@@ -18,7 +18,7 @@ setup:
 	@$(PYTHON) -c "import sys; exit(0 if sys.version_info >= (3, 12) else 1)" 2>/dev/null || { echo "Python 3.12 or newer is required. Current: $$($(PYTHON) --version 2>/dev/null || echo 'unknown')"; exit 1; }
 	@command -v docker >/dev/null 2>&1 || { echo "Docker is required for building/pushing the UI image. Install from https://www.docker.com/"; exit 1; }
 	@test -d .venv || $(PYTHON) -m venv .venv
-	@. .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt -r ui/requirements.txt
+	@. .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt -r requirements-dev.txt -r ui/requirements.txt
 	@echo "Setup complete. Run: make run-ui"
 
 precommit-install:
@@ -32,6 +32,9 @@ clean-notebooks:
 
 test:
 	set -a; [ -f .env ] && . .env; set +a; PYTHONPATH=. $(RUN_PYTHON) -m pytest -q
+
+coverage:
+	set -a; [ -f .env ] && . .env; set +a; PYTHONPATH=. $(RUN_PYTHON) -m pytest -q --cov=. --cov-report=term-missing
 
 # Local Development (prefer .venv if present so "make setup && make run-ui" works)
 RUN_PYTHON := $(if $(wildcard .venv/bin/python),.venv/bin/python,$(PYTHON))

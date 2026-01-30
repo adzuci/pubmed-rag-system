@@ -6,6 +6,7 @@ exclude = '''
 /(
     \.git
   | \.venv
+  | \.terraform
   | __pycache__
   | notebooks
 )/

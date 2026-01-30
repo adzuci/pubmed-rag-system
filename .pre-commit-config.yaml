@@ -1,12 +1,4 @@
 repos:
-  - repo: local
-    hooks:
-      - id: nbstripout
-        name: Strip Jupyter outputs
-        entry: python -m nbstripout
-        language: system
-        files: \.ipynb$
-
   - repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:

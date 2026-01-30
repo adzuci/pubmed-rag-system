@@ -1,17 +1,8 @@
-"""Lambda handler that ingests PubMed records into S3.
+"""PubMed ingest Lambda: search PubMed, fetch MEDLINE, and drop raw .txt into S3.
 
-This Lambda:
-- Reads NCBI credentials from Secrets Manager.
-- Uses Entrez ESearch/EFetch to retrieve MEDLINE records.
-- Writes formatted text files into the configured S3 `raw/` prefix.
-
-Environment variables:
-    NCBI_SECRET_ARN: ARN of the secret containing NCBI credentials.
-    S3_BUCKET: Destination bucket for raw files.
-    RAW_PREFIX: Prefix under which to write text files (default: raw/).
-    PUBMED_QUERY: Override for the PubMed query string.
-    RETMAX: Max records to retrieve.
-    BATCH_SIZE: EFetch batch size.
+We pull NCBI credentials from Secrets Manager, run ESearch/EFetch (same idea as the
+notebook), and write one formatted .txt per PMID under the bucket's raw/ prefix.
+Configure via NCBI_SECRET_ARN, S3_BUCKET; optional PUBMED_QUERY, RETMAX, BATCH_SIZE, RAW_PREFIX.
 """
 
 import json
@@ -33,8 +24,9 @@ LOGGER = logging.getLogger("pubmed-ingest")
 LOGGER.setLevel(logging.INFO)
 
 
+# --- Secrets ---
 def _get_secret_value(secret_arn):
-    """Fetch and decode a JSON secret from Secrets Manager."""
+    """Load the secret from Secrets Manager and return it as a dict (JSON string or binary)."""
     client = boto3.client("secretsmanager")
     resp = client.get_secret_value(SecretId=secret_arn)
     if "SecretString" in resp:
@@ -42,8 +34,9 @@ def _get_secret_value(secret_arn):
     return json.loads(resp["SecretBinary"].decode("utf-8"))
 
 
+# --- Record formatting ---
 def _format_record(rec):
-    """Convert a MEDLINE record into a single human-readable text blob."""
+    """Turn one parsed MEDLINE record into the same .txt-style block we use in the notebook."""
     parts = []
     if rec.get("PMID"):
         parts.append(f"PMID: {rec['PMID']}")
@@ -61,9 +54,10 @@ def _format_record(rec):
 
 
 def handler(event, context):
-    """Entry point for the PubMed ingest Lambda."""
+    """Run the full ingest: search, fetch in batches, write .txt files to S3."""
     del event  # unused
 
+    # --- Config and validation ---
     secret_arn = os.getenv("NCBI_SECRET_ARN", "")
     bucket = os.getenv("S3_BUCKET", "")
     raw_prefix = os.getenv("RAW_PREFIX", "raw/").rstrip("/") + "/"
@@ -92,9 +86,11 @@ def handler(event, context):
     if api_key:
         Entrez.api_key = api_key
 
+    # NCBI allows more requests/sec with an API key; use shorter delay when key is set.
     request_delay = 0.10 if api_key else 0.34
     s3 = boto3.client("s3")
 
+    # --- PubMed search (ESearch) ---
     try:
         stream = Entrez.esearch(db="pubmed", term=query, retmax=retmax, usehistory="y")
         record = Entrez.read(stream)
@@ -111,8 +107,10 @@ def handler(event, context):
     if not (webenv and query_key):
         raise RuntimeError("Missing WebEnv or QueryKey from PubMed search.")
 
+    # --- Fetch in batches and write to S3 (EFetch) ---
     written = 0
     for start in range(0, target_count, batch_size):
+        # Leave enough time for this batch and a clean shutdown.
         if context and context.get_remaining_time_in_millis() < 15000:
             LOGGER.warning("Stopping early to avoid Lambda timeout.")
             break
@@ -143,6 +141,7 @@ def handler(event, context):
         if start + batch_size < target_count:
             time.sleep(request_delay)
 
+    # --- Response ---
     LOGGER.info("pubmed_ingest_complete: %s records", written)
     return {
         "statusCode": 200,
